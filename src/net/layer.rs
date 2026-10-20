@@ -3,9 +3,8 @@ use rand::rngs::StdRng;
 
 pub struct Layer {
     neurons: Vec<Neuron>,
-    last_input: Vec<f64>,
-    caches: Vec<Cache>,
     activation_function: ActivationFunction,
+    cache: Cache,
 }
 
 impl Layer {
@@ -17,13 +16,11 @@ impl Layer {
         activation_function: ActivationFunction,
     ) -> Self {
         let neurons: Vec<Neuron> = Self::neurons(rng, bias_on, neurons_count, neuron_inputs_count);
-        let last_input: Vec<f64> = Self::last_input();
-        let caches: Vec<Cache> = Self::caches(neurons_count);
+        let cache: Cache = Self::caches(neurons_count);
         Self {
             neurons,
-            last_input,
-            caches,
             activation_function,
+            cache,
         }
     }
     fn neurons(
@@ -36,37 +33,46 @@ impl Layer {
             .map(|_| Neuron::new(rng, neuron_inputs_count, bias_on))
             .collect()
     }
-    fn last_input() -> Vec<f64> {
-        Vec::new()
-    }
-    fn caches(neurons_count: usize) -> Vec<Cache> {
-        vec![Cache::default(); neurons_count]
+    fn caches(neurons_count: usize) -> Cache {
+        Cache::new(neurons_count)
     }
 }
 
 impl Layer {
     pub fn process(&mut self, input: Vec<f64>) -> Vec<f64> {
-        self.last_input = input.clone();
-        let mut output: Vec<f64> = Vec::with_capacity(self.neurons.len());
+        self.cache.update_last_input(input.clone());
 
+        let mut output: Vec<f64> = Vec::with_capacity(self.neurons.len());
         for neuron in &mut self.neurons {
             output.push(neuron.process(&input));
         }
-        for (idx, cache) in self.caches.iter_mut().enumerate() {
-            cache.change_sum(output[idx]);
-        }
 
+        self.cache.update_vec_z(&output);
         self.activation_function.process(&mut output);
-        for (idx, cache) in self.caches.iter_mut().enumerate() {
-            cache.change_output(output[idx]);
-        }
+        self.cache.update_vec_a(&output);
 
         output
+    }
+    pub fn process_backward(&mut self, given_gradient: Vec<f64>) -> Vec<f64> {
+        let weights: Vec<Vec<f64>> = self.weights();
+        self.cache.update_backward(given_gradient, self.activation_function, weights)
+    }
+    fn weights(&self) -> Vec<Vec<f64>> {
+        let mut vec: Vec<Vec<f64>> = Vec::new();
+        for neuron in &self.neurons {
+            vec.push(neuron.weights());
+        }
+        vec
     }
     pub fn output_count(&self) -> usize {
         self.neurons.len()
     }
     pub fn change_activation_function(&mut self, activation_function: ActivationFunction) {
         self.activation_function = activation_function;
+    }
+    pub fn learn(&mut self, learning_rate: f64) {
+        for (idx, neuron) in self.neurons.iter_mut().enumerate() {
+            neuron.learn(learning_rate, self.cache.get_single_weights_gradient(idx), self.cache.get_single_bias_gradient(idx));
+        }
     }
 }

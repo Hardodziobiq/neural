@@ -1,8 +1,10 @@
-use crate::net::{activation_function::ActivationFunction, layer::Layer};
+use crate::net::{activation_function::ActivationFunction, layer::Layer, loss::Loss};
 use rand::{SeedableRng, rngs::StdRng};
 
 pub struct NeuralNet {
     layers: Vec<Layer>,
+    loss: Loss,
+    learning_rate: f64,
 }
 
 impl NeuralNet {
@@ -13,6 +15,8 @@ impl NeuralNet {
         layers_neuron_count: Vec<usize>,
         hidden_activation_function: ActivationFunction,
         output_activation_function: ActivationFunction,
+        loss: Loss,
+        learning_rate: f64,
     ) -> Self {
         let mut layers: Vec<Layer> = Vec::new();
         let mut rng: StdRng = Self::rng(seed);
@@ -34,7 +38,7 @@ impl NeuralNet {
             output_layer.change_activation_function(output_activation_function);
         }
 
-        Self { layers }
+        Self { layers, loss, learning_rate }
     }
 
     fn rng(seed: u64) -> StdRng {
@@ -48,5 +52,19 @@ impl NeuralNet {
             input = layer.process(input);
         }
         input
+    }
+    pub fn process_backward(&mut self, predictions: &[f64], real: &[f64]) {
+        let mut given_gradient = Vec::new();
+        for idx in (0..self.layers.len()).rev() {
+            if idx == self.layers.len() - 1 {
+                given_gradient = self.loss.calculate_init_gradient(predictions, real);
+            }
+            given_gradient = self.layers[idx].process_backward(given_gradient);
+        }
+    }
+    pub fn learn(&mut self) {
+        for layer in &mut self.layers {
+            layer.learn(self.learning_rate);
+        }
     }
 }
