@@ -1,4 +1,4 @@
-use crate::net::activation_function::ActivationFunction;
+use crate::net::{activation_function::ActivationFunction, neuron::Neuron};
 
 #[derive(Clone)]
 pub struct Cache {
@@ -12,19 +12,21 @@ pub struct Cache {
     weights_gradient: Vec<Vec<f64>>,
     bias_gradient: Vec<f64>,
     next_gradient: Vec<f64>,
+    samples_count: usize,
 }
 
 impl Cache {
-    pub fn new(neurons_count: usize) -> Self {
+    pub fn new(neurons_count: usize, neuron_inputs_count: usize) -> Self {
         Self {
-            last_input: Vec::new(),
+            last_input: vec![0.0; neuron_inputs_count],
             vec_z: vec![0.0; neurons_count],
             vec_a: vec![0.0; neurons_count],
             given_gradient: Vec::new(),
-            delta: Vec::new(),
-            weights_gradient: Vec::new(),
-            bias_gradient: Vec::new(),
-            next_gradient: Vec::new(),
+            delta: vec![0.0; neurons_count],
+            weights_gradient: vec![vec![0.0; neuron_inputs_count]; neurons_count],
+            bias_gradient: vec![0.0; neurons_count],
+            next_gradient: vec![0.0; neuron_inputs_count],
+            samples_count: 0,
         }
     }
 }
@@ -35,12 +37,12 @@ impl Cache {
         self.last_input = new_last_input;
     }
     pub fn update_vec_z(&mut self, new_output: &[f64]) {
-        for (idx, value) in &mut self.vec_z.iter_mut().enumerate() {
+        for (idx, value) in self.vec_z.iter_mut().enumerate() {
             *value = new_output[idx];
         }
     }
     pub fn update_vec_a(&mut self, new_output: &[f64]) {
-        for (idx, value) in &mut self.vec_a.iter_mut().enumerate() {
+        for (idx, value) in self.vec_a.iter_mut().enumerate() {
             *value = new_output[idx];
         }
     }
@@ -48,44 +50,55 @@ impl Cache {
 
 /// BACKWARD PHASE
 impl Cache {
-    pub fn update_backward(&mut self, given_gradient: Vec<f64>, activation_function: ActivationFunction, weights: Vec<Vec<f64>>) -> Vec<f64> {
+    pub fn update_backward(
+        &mut self,
+        given_gradient: Vec<f64>,
+        activation_function: ActivationFunction,
+        neurons: &[Neuron],
+        need_next_gradient: bool,
+    ) -> Vec<f64> {
         self.given_gradient = given_gradient;
         self.compute_delta(activation_function);
-        self.compute_weights_gradient();
-        self.compute_bias_gradient();
-        self.compute_next_gradient(weights)
-    }
-    fn compute_delta(&mut self, activation_function: ActivationFunction) {
-        let diff: Vec<f64> = activation_function.backward_diff(&self.vec_z, &self.vec_a);
-        if self.delta.len() == 0 {
-            self.delta = vec![0.0; diff.len()];
+        self.accumulate_weights_gradient();
+        self.accumulate_bias_gradient();
+        self.samples_count += 1;
+
+        if need_next_gradient {
+            self.compute_next_gradient(neurons)
+        } else {
+            Vec::new()
         }
-        self.delta
-            .iter_mut()
-            .enumerate()
-            .for_each(|(idx, val)| {
-                *val = self.given_gradient[idx] * diff[idx];
-        });
     }
-    fn compute_weights_gradient(&mut self) {
-        self.weights_gradient = self.delta
-            .iter()
-            .map(|delta_i| {
-                self.last_input
-                    .iter()
-                    .map(|val| delta_i * val)
-                    .collect()
-            })
-            .collect();
+
+    fn compute_delta(&mut self, activation_function: ActivationFunction) {
+        self.delta =
+            activation_function.compute_delta(&self.given_gradient, &self.vec_z, &self.vec_a);
     }
-    fn compute_bias_gradient(&mut self) {
-        self.bias_gradient = self.delta.clone();
+
+    fn accumulate_weights_gradient(&mut self) {
+        for (neuron_idx, delta_i) in self.delta.iter().enumerate() {
+            for (input_idx, input_val) in self.last_input.iter().enumerate() {
+                self.weights_gradient[neuron_idx][input_idx] += delta_i * input_val;
+            }
+        }
     }
-    fn compute_next_gradient(&mut self, weights: Vec<Vec<f64>>) -> Vec<f64> {
-        self.next_gradient = vec![0.0; self.given_gradient.len()];
-        for (weight_idx, values) in weights.iter().enumerate() {
-            for (idx, val) in values.iter().enumerate() {
-                self.next_gradient[idx] += self.delta[weight_idx] * val;
+
+    fn accumulate_bias_gradient(&mut self) {
+        for (neuron_idx, delta_i) in self.delta.iter().enumerate() {
+            self.bias_gradient[neuron_idx] += delta_i;
+        }
+    }
+
+    fn compute_next_gradient(&mut self, neurons: &[Neuron]) -> Vec<f64> {
+        self.next_gradient.fill(0.0);
+        if self.next_gradient.len() != self.last_input.len() {
+            self.next_gradient.resize(self.last_input.len(), 0.0);
+        }
+
+        for (neuron_idx, neuron) in neurons.iter().enumerate() {
+            let delta_i = self.delta[neuron_idx];
+            for (input_idx, weight_val) in neuron.weights().iter().enumerate() {
+                self.next_gradient[input_idx] += delta_i * weight_val;
             }
         }
         self.next_gradient.clone()
@@ -94,10 +107,20 @@ impl Cache {
 
 /// LEARN PHASE
 impl Cache {
-    pub fn get_single_weights_gradient(&self, idx: usize) -> &Vec<f64> {
+    pub fn get_single_weights_gradient(&self, idx: usize) -> &[f64] {
         &self.weights_gradient[idx]
     }
-    pub fn get_single_bias_gradient(&self, idx: usize) -> &f64 {
-        &self.bias_gradient[idx]
+    pub fn get_single_bias_gradient(&self, idx: usize) -> f64 {
+        self.bias_gradient[idx]
+    }
+    pub fn samples_count(&self) -> usize {
+        self.samples_count
+    }
+    pub fn clear_gradients(&mut self) {
+        for row in &mut self.weights_gradient {
+            row.fill(0.0);
+        }
+        self.bias_gradient.fill(0.0);
+        self.samples_count = 0;
     }
 }

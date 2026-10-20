@@ -24,7 +24,7 @@ impl Neuron {
 }
 
 impl Neuron {
-    pub fn process(&mut self, input: &[f64]) -> f64 {
+    pub fn process(&self, input: &[f64]) -> f64 {
         let mut sum: f64 = 0.0;
         for (idx, x) in input.iter().enumerate() {
             sum += self.weights[idx] * x;
@@ -34,15 +34,32 @@ impl Neuron {
         }
         sum
     }
-    pub fn weights(&self) -> Vec<f64> {
-        self.weights.clone()
+
+    pub fn weights(&self) -> &[f64] {
+        &self.weights
     }
-    pub fn learn(&mut self, learning_rate: f64, single_weights_gradient :&Vec<f64>, single_bias_gradient: &f64) {
+
+    pub fn bias(&self) -> f64 {
+        self.bias
+    }
+
+    pub fn learn(
+        &mut self,
+        learning_rate: f64,
+        weights_gradient_sum: &[f64],
+        bias_gradient_sum: f64,
+        samples_count: usize,
+    ) {
+        if samples_count == 0 {
+            return;
+        }
+        let step: f64 = learning_rate / samples_count as f64;
+
         for (idx, value) in self.weights.iter_mut().enumerate() {
-            *value -= learning_rate * single_weights_gradient[idx];
+            *value -= step * weights_gradient_sum[idx];
         }
         if self.bias_on {
-            self.bias -= learning_rate * single_bias_gradient;
+            self.bias -= step * bias_gradient_sum;
         }
     }
 }

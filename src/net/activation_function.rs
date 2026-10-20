@@ -21,13 +21,14 @@ impl ActivationFunction {
             ActivationFunction::SoftMax => soft_max(output),
         }
     }
-    pub fn backward_diff(&self, vec_z: &[f64], vec_a: &[f64]) -> Vec<f64> {
+
+    pub fn compute_delta(&self, given_gradient: &[f64], vec_z: &[f64], vec_a: &[f64]) -> Vec<f64> {
         match self {
-            ActivationFunction::Linear => diff_linear(vec_z),
-            ActivationFunction::Sigmoid => diff_sigmoid(vec_a),
-            ActivationFunction::Tanh => diff_tanh(vec_a),
-            ActivationFunction::Relu => diff_relu(vec_z),
-            ActivationFunction::SoftMax => diff_softmax(0, vec_a), // PROBLEM
+            ActivationFunction::Linear => delta_linear(given_gradient),
+            ActivationFunction::Sigmoid => delta_sigmoid(given_gradient, vec_a),
+            ActivationFunction::Tanh => delta_tanh(given_gradient, vec_a),
+            ActivationFunction::Relu => delta_relu(given_gradient, vec_z),
+            ActivationFunction::SoftMax => delta_softmax(given_gradient, vec_a),
         }
     }
 }
@@ -37,8 +38,11 @@ fn linear(output: &mut [f64]) {
         *value = STANDARD_LINEAR_ALFA * *value + STANDARD_LINEAR_BETA;
     });
 }
-fn diff_linear(vec_z: &[f64]) -> Vec<f64> {
-    vec![STANDARD_LINEAR_ALFA; vec_z.len()]
+fn delta_linear(given_gradient: &[f64]) -> Vec<f64> {
+    given_gradient
+        .iter()
+        .map(|g| g * STANDARD_LINEAR_ALFA)
+        .collect()
 }
 
 fn sigmoid(output: &mut [f64]) {
@@ -46,27 +50,24 @@ fn sigmoid(output: &mut [f64]) {
         *value = 1.0 / (1.0 + (-*value * STANDARD_SIGMOID_ALFA).exp());
     });
 }
-fn diff_sigmoid(vec_a: &[f64]) -> Vec<f64> {
-    vec_a
+fn delta_sigmoid(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
+    given_gradient
         .iter()
-        .map(|a| {
-           a * (1.0 - a) 
-        })
+        .zip(vec_a.iter())
+        .map(|(g, a)| g * STANDARD_SIGMOID_ALFA * a * (1.0 - a))
         .collect()
 }
-
 
 fn tanh(output: &mut [f64]) {
     output.iter_mut().for_each(|value| {
         *value = value.tanh();
     });
 }
-fn diff_tanh(vec_a: &[f64]) -> Vec<f64> {
-    vec_a
+fn delta_tanh(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
+    given_gradient
         .iter()
-        .map(|a| {
-           1.0 - a.powi(2)
-        })
+        .zip(vec_a.iter())
+        .map(|(g, a)| g * (1.0 - a.powi(2)))
         .collect()
 }
 
@@ -75,17 +76,12 @@ fn relu(output: &mut [f64]) {
         *value = value.max(0.0);
     });
 }
-fn diff_relu(vec_z: &[f64]) -> Vec<f64> {
-    let mut new_vec: Vec<f64> = Vec::new();
-    for z in vec_z {
-        if 0.0 < *z {
-            new_vec.push(1.0);
-        }
-        else {
-            new_vec.push(0.0);
-        }
-    }
-    new_vec
+fn delta_relu(given_gradient: &[f64], vec_z: &[f64]) -> Vec<f64> {
+    given_gradient
+        .iter()
+        .zip(vec_z.iter())
+        .map(|(g, z)| if *z > 0.0 { *g } else { 0.0 })
+        .collect()
 }
 
 fn soft_max(output: &mut [f64]) {
@@ -99,17 +95,16 @@ fn soft_max(output: &mut [f64]) {
         *value = (*value - max).exp() / sum;
     }
 }
-fn diff_softmax(k: usize, vec_a: &[f64]) -> Vec<f64> {
+fn delta_softmax(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
+    let dot_product: f64 = vec_a
+        .iter()
+        .zip(given_gradient.iter())
+        .map(|(a_k, g_k)| a_k * g_k)
+        .sum();
+
     vec_a
         .iter()
-        .enumerate()
-        .map(|(i, &a_i)| {
-            if k == i {
-                vec_a[k] * (1.0 - vec_a[k])
-            } 
-            else {
-                -vec_a[k] * a_i
-            }
-        })
+        .zip(given_gradient.iter())
+        .map(|(a_i, g_i)| a_i * (g_i - dot_product))
         .collect()
 }

@@ -1,3 +1,4 @@
+const PROTECT: f64 = 1e-15;
 pub enum Loss {
     MeanSquaredError,
     MeanAbsoluteError,
@@ -36,9 +37,7 @@ fn init_gradient_mse(predictions: &[f64], real: &[f64]) -> Vec<f64> {
     predictions
         .iter()
         .zip(real.iter())
-        .map(|(prediction, real)| {
-            prediction - real
-        })
+        .map(|(prediction, real)| prediction - real)
         .collect()
 }
 
@@ -51,11 +50,18 @@ fn mae(predictions: &[f64], real: &[f64]) -> f64 {
         / predictions.len() as f64
 }
 fn init_gradient_mae(predictions: &[f64], real: &[f64]) -> Vec<f64> {
+    let n = predictions.len() as f64;
     predictions
         .iter()
         .zip(real.iter())
         .map(|(prediction, real)| {
-            (prediction - real).signum() / predictions.len() as f64
+            if prediction > real {
+                1.0 / n
+            } else if prediction < real {
+                -1.0 / n
+            } else {
+                0.0
+            }
         })
         .collect()
 }
@@ -65,8 +71,8 @@ fn bce(predictions: &[f64], real: &[f64]) -> f64 {
         .iter()
         .zip(real.iter())
         .map(|(prediction, real)| {
-            -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln()
-                + (1.0 - real) * (1.0 - prediction.clamp(1e-15, 1.0 - 1e-15)).ln())
+            let p = prediction.clamp(PROTECT, 1.0 - PROTECT);
+            -(real * p.ln() + (1.0 - real) * (1.0 - p).ln())
         })
         .sum()
 }
@@ -75,7 +81,8 @@ fn init_gradient_bce(predictions: &[f64], real: &[f64]) -> Vec<f64> {
         .iter()
         .zip(real.iter())
         .map(|(prediction, real)| {
-            (prediction - real) / (prediction * (1.0 - prediction))
+            let p: f64 = prediction.clamp(PROTECT, 1.0 - PROTECT);
+            (p - real) / (p * (1.0 - p))
         })
         .collect()
 }
@@ -84,7 +91,10 @@ fn cce(predictions: &[f64], real: &[f64]) -> f64 {
     predictions
         .iter()
         .zip(real.iter())
-        .map(|(prediction, real)| -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln()))
+        .map(|(prediction, real)| {
+            let p: f64 = prediction.clamp(PROTECT, 1.0 - PROTECT);
+            -(real * p.ln())
+        })
         .sum()
 }
 fn init_gradient_cce(predictions: &[f64], real: &[f64]) -> Vec<f64> {
@@ -92,7 +102,8 @@ fn init_gradient_cce(predictions: &[f64], real: &[f64]) -> Vec<f64> {
         .iter()
         .zip(real.iter())
         .map(|(prediction, real)| {
-            -real / prediction
+            let p = prediction.clamp(PROTECT, 1.0 - PROTECT);
+            -real / p
         })
         .collect()
 }

@@ -16,7 +16,7 @@ impl Layer {
         activation_function: ActivationFunction,
     ) -> Self {
         let neurons: Vec<Neuron> = Self::neurons(rng, bias_on, neurons_count, neuron_inputs_count);
-        let cache: Cache = Self::caches(neurons_count);
+        let cache: Cache = Self::caches(neurons_count, neuron_inputs_count);
         Self {
             neurons,
             activation_function,
@@ -33,8 +33,8 @@ impl Layer {
             .map(|_| Neuron::new(rng, neuron_inputs_count, bias_on))
             .collect()
     }
-    fn caches(neurons_count: usize) -> Cache {
-        Cache::new(neurons_count)
+    fn caches(neurons_count: usize, neuron_inputs_count: usize) -> Cache {
+        Cache::new(neurons_count, neuron_inputs_count)
     }
 }
 
@@ -43,7 +43,7 @@ impl Layer {
         self.cache.update_last_input(input.clone());
 
         let mut output: Vec<f64> = Vec::with_capacity(self.neurons.len());
-        for neuron in &mut self.neurons {
+        for neuron in &self.neurons {
             output.push(neuron.process(&input));
         }
 
@@ -53,26 +53,46 @@ impl Layer {
 
         output
     }
-    pub fn process_backward(&mut self, given_gradient: Vec<f64>) -> Vec<f64> {
-        let weights: Vec<Vec<f64>> = self.weights();
-        self.cache.update_backward(given_gradient, self.activation_function, weights)
+
+    pub fn process_backward(
+        &mut self,
+        given_gradient: Vec<f64>,
+        need_next_gradient: bool,
+    ) -> Vec<f64> {
+        self.cache.update_backward(
+            given_gradient,
+            self.activation_function,
+            &self.neurons,
+            need_next_gradient,
+        )
     }
-    fn weights(&self) -> Vec<Vec<f64>> {
-        let mut vec: Vec<Vec<f64>> = Vec::new();
-        for neuron in &self.neurons {
-            vec.push(neuron.weights());
-        }
-        vec
+
+    pub fn weights(&self) -> Vec<Vec<f64>> {
+        self.neurons.iter().map(|n| n.weights().to_vec()).collect()
     }
+
+    pub fn biases(&self) -> Vec<f64> {
+        self.neurons.iter().map(|n| n.bias()).collect()
+    }
+
     pub fn output_count(&self) -> usize {
         self.neurons.len()
     }
+
     pub fn change_activation_function(&mut self, activation_function: ActivationFunction) {
         self.activation_function = activation_function;
     }
+
     pub fn learn(&mut self, learning_rate: f64) {
+        let samples_count = self.cache.samples_count();
         for (idx, neuron) in self.neurons.iter_mut().enumerate() {
-            neuron.learn(learning_rate, self.cache.get_single_weights_gradient(idx), self.cache.get_single_bias_gradient(idx));
+            neuron.learn(
+                learning_rate,
+                self.cache.get_single_weights_gradient(idx),
+                self.cache.get_single_bias_gradient(idx),
+                samples_count,
+            );
         }
+        self.cache.clear_gradients();
     }
 }

@@ -38,7 +38,11 @@ impl NeuralNet {
             output_layer.change_activation_function(output_activation_function);
         }
 
-        Self { layers, loss, learning_rate }
+        Self {
+            layers,
+            loss,
+            learning_rate,
+        }
     }
 
     fn rng(seed: u64) -> StdRng {
@@ -53,15 +57,15 @@ impl NeuralNet {
         }
         input
     }
+
     pub fn process_backward(&mut self, predictions: &[f64], real: &[f64]) {
-        let mut given_gradient = Vec::new();
+        let mut given_gradient = self.loss.calculate_init_gradient(predictions, real);
         for idx in (0..self.layers.len()).rev() {
-            if idx == self.layers.len() - 1 {
-                given_gradient = self.loss.calculate_init_gradient(predictions, real);
-            }
-            given_gradient = self.layers[idx].process_backward(given_gradient);
+            let need_next_gradient = idx > 0;
+            given_gradient = self.layers[idx].process_backward(given_gradient, need_next_gradient);
         }
     }
+
     pub fn learn(&mut self) {
         for layer in &mut self.layers {
             layer.learn(self.learning_rate);
