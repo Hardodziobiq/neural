@@ -1,6 +1,5 @@
-use rand::{SeedableRng, rngs::StdRng};
-
 use crate::net::{activation_function::ActivationFunction, layer::Layer};
+use rand::{SeedableRng, rngs::StdRng};
 
 pub struct NeuralNet {
     layers: Vec<Layer>,

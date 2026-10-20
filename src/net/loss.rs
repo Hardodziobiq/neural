@@ -39,7 +39,8 @@ fn bce(predictions: &[f64], real: &[f64]) -> f64 {
         .iter()
         .zip(real.iter())
         .map(|(prediction, real)| {
-            -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln() + (1.0 - real) * (1.0 - prediction.clamp(1e-15, 1.0 - 1e-15)).ln())
+            -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln()
+                + (1.0 - real) * (1.0 - prediction.clamp(1e-15, 1.0 - 1e-15)).ln())
         })
         .sum()
 }
@@ -48,8 +49,6 @@ fn cce(predictions: &[f64], real: &[f64]) -> f64 {
     predictions
         .iter()
         .zip(real.iter())
-        .map(|(prediction, real)| {
-            -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln())
-        })
+        .map(|(prediction, real)| -(real * prediction.clamp(1e-15, 1.0 - 1e-15).ln()))
         .sum()
 }

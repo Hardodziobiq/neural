@@ -45,7 +45,11 @@ fn relu(values: &mut [f64]) {
 }
 
 fn soft_max(values: &mut [f64]) {
-    let max: f64 = values.iter().max_by(|a, b| a.total_cmp(b)).copied().unwrap_or(0.0);
+    let max: f64 = values
+        .iter()
+        .max_by(|a, b| a.total_cmp(b))
+        .copied()
+        .unwrap_or(0.0);
     let sum: f64 = values.iter().map(|value| (*value - max).exp()).sum();
     for value in values {
         *value = (*value - max).exp() / sum;
@@ -72,4 +76,3 @@ fn soft_max(values: &mut [f64]) {
 //     }
 //     return 1.0;
 // }
-
