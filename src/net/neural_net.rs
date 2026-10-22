@@ -1,10 +1,11 @@
-use crate::net::{activation_function::ActivationFunction, layer::Layer, loss::Loss};
+use crate::net::{activation_function::ActivationFunction, data_set::Dataset, history::History, layer::Layer, loss::Loss};
 use rand::{SeedableRng, rngs::StdRng};
 
 pub struct NeuralNet {
     layers: Vec<Layer>,
     loss: Loss,
     learning_rate: f64,
+    rng: StdRng,
 }
 
 impl NeuralNet {
@@ -42,6 +43,7 @@ impl NeuralNet {
             layers,
             loss,
             learning_rate,
+            rng
         }
     }
 
@@ -51,24 +53,91 @@ impl NeuralNet {
 }
 
 impl NeuralNet {
-    pub fn process(&mut self, mut input: Vec<f64>) -> Vec<f64> {
+    fn process(&mut self, mut input: Vec<f64>) -> Vec<f64> {
         for layer in &mut self.layers {
             input = layer.process(input);
         }
         input
     }
 
-    pub fn process_backward(&mut self, predictions: &[f64], real: &[f64]) {
-        let mut given_gradient = self.loss.calculate_init_gradient(predictions, real);
+    fn process_backward(&mut self, predictions: &[f64], real: &[f64]) {
+        let mut given_gradient: Vec<f64> = self.loss.calculate_init_gradient(predictions, real);
         for idx in (0..self.layers.len()).rev() {
             let need_next_gradient = idx > 0;
             given_gradient = self.layers[idx].process_backward(given_gradient, need_next_gradient);
         }
     }
 
-    pub fn learn(&mut self) {
+    fn learn(&mut self) {
         for layer in &mut self.layers {
             layer.learn(self.learning_rate);
         }
+    }
+
+    pub fn train(
+        &mut self,
+        train_dataset: &Dataset,
+        test_dataset: Option<&Dataset>,
+        epoch_count: usize,
+        batch_size: usize,
+    ) -> History {
+        let mut history: History = History::new();
+        let mut iteration: usize = 0;
+
+        for epoch in 1..=epoch_count {
+            let shuffled_data: Dataset = train_dataset.shuffled(&mut self.rng);
+            for (inputs, targets) in shuffled_data
+                .features
+                .chunks(batch_size)
+                .zip(shuffled_data.targets.chunks(batch_size))
+            {
+                for (input, real) in inputs.iter().zip(targets) {
+                    let predictions: Vec<f64> = self.process(input.clone());
+                    self.process_backward(&predictions, real);
+                }
+
+                self.learn();
+                iteration += 1;
+
+                history.record_parameters(
+                    iteration,
+                    self.weights_snapshot(),
+                    self.biases_snapshot(),
+                );
+            }
+
+            let train_loss: f64 = self
+                .test(train_dataset)
+                .expect("Training dataset must not be empty");
+
+            let test_loss: Option<f64> =
+                test_dataset.and_then(|dataset| self.test(dataset));
+
+            history.record_epoch(epoch, train_loss, test_loss);
+        }
+
+        history
+    }
+
+    pub fn test(&mut self, dataset: &Dataset) -> Option<f64> {
+        if dataset.features.is_empty() || dataset.features.len() != dataset.targets.len() {
+            return None;
+        }
+
+        let mut total_loss: f64 = 0.0;
+        for (input, real) in dataset.features.iter().zip(&dataset.targets) {
+            let predictions: Vec<f64> = self.process(input.clone());
+            total_loss += self.loss.calculate(&predictions, real);
+        }
+
+        Some(total_loss / dataset.features.len() as f64)
+    }
+
+    pub fn weights_snapshot(&self) -> Vec<Vec<Vec<f64>>> {
+        self.layers.iter().map(|layer| layer.weights()).collect()
+    }
+
+    pub fn biases_snapshot(&self) -> Vec<Vec<f64>> {
+        self.layers.iter().map(|layer| layer.biases()).collect()
     }
 }

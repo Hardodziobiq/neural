@@ -2,6 +2,8 @@ const STANDARD_LINEAR_ALFA: f64 = 1.0;
 const STANDARD_LINEAR_BETA: f64 = 0.0;
 const STANDARD_SIGMOID_ALFA: f64 = 1.0;
 
+const PROTECT: f64 = 1e-15;
+
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 pub enum ActivationFunction {
     Linear,
@@ -54,7 +56,10 @@ fn delta_sigmoid(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
     given_gradient
         .iter()
         .zip(vec_a.iter())
-        .map(|(g, a)| g * STANDARD_SIGMOID_ALFA * a * (1.0 - a))
+        .map(|(g, a)| {
+            let a_clamped = a.clamp(PROTECT, 1.0 - PROTECT);
+            g * STANDARD_SIGMOID_ALFA * a_clamped * (1.0 - a_clamped)
+        })
         .collect()
 }
 
@@ -96,13 +101,18 @@ fn soft_max(output: &mut [f64]) {
     }
 }
 fn delta_softmax(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
-    let dot_product: f64 = vec_a
+    let a_clamped: Vec<f64> = vec_a
+        .iter()
+        .map(|a| a.clamp(PROTECT, 1.0 - PROTECT))
+        .collect();
+
+    let dot_product: f64 = a_clamped
         .iter()
         .zip(given_gradient.iter())
         .map(|(a_k, g_k)| a_k * g_k)
         .sum();
 
-    vec_a
+    a_clamped
         .iter()
         .zip(given_gradient.iter())
         .map(|(a_i, g_i)| a_i * (g_i - dot_product))

@@ -1,3 +1,5 @@
+pub mod data_set;
+pub mod history;
 pub mod activation_function;
 pub mod cache;
 pub mod layer;
