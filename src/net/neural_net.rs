@@ -1,6 +1,10 @@
 use crate::net::{
-    activation_function::ActivationFunction, data_set::Dataset, error::ValidationError,
-    history::History, layer::Layer, loss::Loss,
+    activation_function::ActivationFunction,
+    data_set::Dataset,
+    error::ValidationError,
+    history::{History, SnapshotPolicy},
+    layer::Layer,
+    loss::Loss,
 };
 use rand::{SeedableRng, rngs::StdRng};
 
@@ -81,6 +85,35 @@ impl NeuralNet {
 }
 
 impl NeuralNet {
+    pub fn seed(&self) -> u64 {
+        self.seed
+    }
+
+    /// Predicts one sample without changing parameters, caches, or random state.
+    /// Inputs must already use the same preprocessing as the training data.
+    pub fn predict(&self, input: &[f64]) -> Result<Vec<f64>, ValidationError> {
+        if input.len() != self.inputs_count {
+            return Err(ValidationError::new(format!(
+                "Expected {} input values, got {}",
+                self.inputs_count,
+                input.len(),
+            )));
+        }
+        if input.iter().any(|value| !value.is_finite()) {
+            return Err(ValidationError::new("Prediction inputs must be finite"));
+        }
+        let mut output = input.to_vec();
+        for (index, layer) in self.layers.iter().enumerate() {
+            output = layer.predict(&output);
+            if output.iter().any(|value| !value.is_finite()) {
+                return Err(ValidationError::new(format!(
+                    "Layer {index} produced a nonfinite prediction",
+                )));
+            }
+        }
+        Ok(output)
+    }
+
     fn process(&mut self, mut input: Vec<f64>) -> Vec<f64> {
         for layer in &mut self.layers {
             input = layer.process(input);
@@ -116,8 +149,32 @@ impl NeuralNet {
         epoch_count: usize,
         batch_size: usize,
     ) -> Result<History, ValidationError> {
+        self.train_with_history(
+            train_dataset,
+            test_dataset,
+            epoch_count,
+            batch_size,
+            SnapshotPolicy::Disabled,
+        )
+    }
+
+    /// Records the initial parameters (iteration zero) and subsequent snapshots
+    /// according to the chosen policy. Zero epochs produces no snapshots.
+    pub fn train_with_history(
+        &mut self,
+        train_dataset: &Dataset,
+        test_dataset: Option<&Dataset>,
+        epoch_count: usize,
+        batch_size: usize,
+        snapshot_policy: SnapshotPolicy,
+    ) -> Result<History, ValidationError> {
         if batch_size == 0 {
             return Err(ValidationError::new("Batch size must be greater than zero"));
+        }
+        if snapshot_policy == SnapshotPolicy::EveryIterations(0) {
+            return Err(ValidationError::new(
+                "Snapshot interval must be greater than zero",
+            ));
         }
         let outputs_count = self.layers.last().map_or(0, Layer::output_count);
         train_dataset.validate(self.inputs_count, outputs_count)?;
@@ -127,6 +184,9 @@ impl NeuralNet {
 
         let mut history: History = History::new();
         let mut iteration: usize = 0;
+        if epoch_count > 0 && snapshot_policy != SnapshotPolicy::Disabled {
+            self.record_snapshot(&mut history, iteration);
+        }
 
         for epoch in 1..=epoch_count {
             let shuffled_data: Dataset = train_dataset.shuffled(&mut self.rng);
@@ -143,11 +203,15 @@ impl NeuralNet {
                 self.learn();
                 iteration += 1;
 
-                history.record_parameters(
-                    iteration,
-                    self.weights_snapshot(),
-                    self.biases_snapshot(),
-                );
+                if let SnapshotPolicy::EveryIterations(interval) = snapshot_policy {
+                    if iteration.is_multiple_of(interval) {
+                        self.record_snapshot(&mut history, iteration);
+                    }
+                }
+            }
+
+            if snapshot_policy == SnapshotPolicy::EveryEpoch {
+                self.record_snapshot(&mut history, iteration);
             }
 
             let train_loss: f64 = self.evaluate_validated(train_dataset)?;
@@ -163,20 +227,24 @@ impl NeuralNet {
     }
 
     /// Returns mean loss or a descriptive error for an invalid dataset.
-    pub fn test(&mut self, dataset: &Dataset) -> Result<f64, ValidationError> {
+    pub fn test(&self, dataset: &Dataset) -> Result<f64, ValidationError> {
         let outputs_count = self.layers.last().map_or(0, Layer::output_count);
         dataset.validate(self.inputs_count, outputs_count)?;
         self.evaluate_validated(dataset)
     }
 
-    fn evaluate_validated(&mut self, dataset: &Dataset) -> Result<f64, ValidationError> {
+    fn evaluate_validated(&self, dataset: &Dataset) -> Result<f64, ValidationError> {
         let mut total_loss: f64 = 0.0;
         for (input, real) in dataset.features.iter().zip(&dataset.targets) {
-            let predictions: Vec<f64> = self.process(input.clone());
+            let predictions: Vec<f64> = self.predict(input)?;
             total_loss += self.loss.calculate(&predictions, real)?;
         }
 
         Ok(total_loss / dataset.features.len() as f64)
+    }
+
+    fn record_snapshot(&self, history: &mut History, iteration: usize) {
+        history.record_parameters(iteration, self.weights_snapshot(), self.biases_snapshot());
     }
 
     pub fn weights_snapshot(&self) -> Vec<Vec<Vec<f64>>> {

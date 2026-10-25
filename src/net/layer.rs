@@ -39,6 +39,17 @@ impl Layer {
 }
 
 impl Layer {
+    /// Inference without overwriting the forward cache used by backpropagation.
+    pub(crate) fn predict(&self, input: &[f64]) -> Vec<f64> {
+        let mut output: Vec<f64> = self
+            .neurons
+            .iter()
+            .map(|neuron| neuron.process(input))
+            .collect();
+        self.activation_function.process(&mut output);
+        output
+    }
+
     pub fn process(&mut self, input: Vec<f64>) -> Vec<f64> {
         self.cache.update_last_input(input.clone());
 

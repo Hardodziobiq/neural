@@ -65,13 +65,14 @@ fn mse(predictions: &[f64], real: &[f64]) -> f64 {
         .zip(real.iter())
         .map(|(prediction, real)| (prediction - real).powi(2))
         .sum::<f64>()
-        / 2.0
+        / predictions.len() as f64
 }
 fn init_gradient_mse(predictions: &[f64], real: &[f64]) -> Vec<f64> {
+    let scale = 2.0 / predictions.len() as f64;
     predictions
         .iter()
         .zip(real.iter())
-        .map(|(prediction, real)| prediction - real)
+        .map(|(prediction, real)| scale * (prediction - real))
         .collect()
 }
 

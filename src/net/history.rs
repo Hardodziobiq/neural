@@ -19,16 +19,18 @@ pub struct History {
 }
 
 impl History {
+    /// Saves a linear-scale SVG chart of training and available test losses.
+    /// The parent directory must exist. Existing files are replaced only after validation.
+    pub fn save_loss_plot(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        let svg = crate::net::history_plot::render(self)?;
+        std::fs::write(path, svg)
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn record_epoch(
-        &mut self,
-        epoch: usize,
-        train_loss: f64,
-        test_loss: Option<f64>,
-    ) {
+    pub fn record_epoch(&mut self, epoch: usize, train_loss: f64, test_loss: Option<f64>) {
         self.epochs.push(EpochMetrics {
             epoch,
             train_loss,
@@ -56,4 +58,13 @@ impl History {
     pub fn is_empty(&self) -> bool {
         self.epochs.is_empty()
     }
+}
+/// Parameter recording is disabled by default; epoch losses are always recorded.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SnapshotPolicy {
+    #[default]
+    Disabled,
+    EveryEpoch,
+    /// Records every N parameter updates. N must be greater than zero.
+    EveryIterations(usize),
 }

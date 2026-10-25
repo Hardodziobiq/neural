@@ -5,6 +5,7 @@ use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
 use crate::net::error::ValidationError;
+use crate::net::standard_scaler::StandardScaler;
 
 #[derive(Clone)]
 pub struct Dataset {
@@ -58,39 +59,17 @@ impl Dataset {
         Ok(())
     }
 
-    pub fn standardize_features(&mut self) {
-        if self.features.is_empty() {
-            return;
-        }
-
-        let num_features = self.features[0].len();
-
-        for col in 0..num_features {
-            let mut values: Vec<f64> = self.features.iter().map(|row| row[col]).collect();
-
-            Self::standardize(&mut values);
-
-            for (row, value) in self.features.iter_mut().zip(values) {
-                row[col] = value;
-            }
-        }
+    /// Fits and applies training statistics. Reuse the returned scaler for test/new inputs.
+    pub fn standardize_features(&mut self) -> Result<StandardScaler, ValidationError> {
+        let scaler = StandardScaler::fit(&self.features)?;
+        scaler.transform(&mut self.features)?;
+        Ok(scaler)
     }
-    pub fn standardize_targets(&mut self) {
-        if self.targets.is_empty() {
-            return;
-        }
-
-        let num_targets = self.targets[0].len();
-
-        for col in 0..num_targets {
-            let mut values: Vec<f64> = self.targets.iter().map(|row| row[col]).collect();
-
-            Self::standardize(&mut values);
-
-            for (row, value) in self.targets.iter_mut().zip(values) {
-                row[col] = value;
-            }
-        }
+    /// For regression only. Use inverse_transform_sample to restore predicted target units.
+    pub fn standardize_targets(&mut self) -> Result<StandardScaler, ValidationError> {
+        let scaler = StandardScaler::fit(&self.targets)?;
+        scaler.transform(&mut self.targets)?;
+        Ok(scaler)
     }
     /// Converts scalar class labels to one-hot vectors after validating every label.
     /// On validation failure, all targets remain unchanged. Row indices are zero-based.
@@ -139,20 +118,6 @@ impl Dataset {
 }
 
 impl Dataset {
-    fn standardize(values: &mut [f64]) -> (f64, f64) {
-        let mean: f64 = values.iter().sum::<f64>() / values.len() as f64;
-
-        let variance: f64 =
-            values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / values.len() as f64;
-
-        let std: f64 = variance.sqrt();
-
-        for x in values.iter_mut() {
-            *x = if std > 0.0 { (*x - mean) / std } else { 0.0 };
-        }
-
-        (mean, std)
-    }
     fn one_hot(class: usize, num_classes: usize) -> Vec<f64> {
         let mut result: Vec<f64> = vec![0.0; num_classes];
 
@@ -219,7 +184,7 @@ pub fn load_classification(path: &str) -> io::Result<(Vec<Vec<f64>>, Vec<usize>)
     if columns < 2 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "Classifictaion requires traits and labels!",
+            "Classification requires features and labels!",
         ));
     }
 
@@ -231,10 +196,7 @@ pub fn load_classification(path: &str) -> io::Result<(Vec<Vec<f64>>, Vec<usize>)
             .split(',')
             .map(|s| {
                 s.trim().parse::<f64>().map_err(|_| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!("Niepoprawna liczba: {s}"),
-                    )
+                    io::Error::new(io::ErrorKind::InvalidData, format!("Invalid number: {s}"))
                 })
             })
             .collect::<io::Result<_>>()?;

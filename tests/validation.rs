@@ -1,6 +1,6 @@
 use neural::net::{
-    activation_function::ActivationFunction, data_set::Dataset, error::ValidationError, loss::Loss,
-    neural_net::NeuralNet,
+    activation_function::ActivationFunction, data_set::Dataset, error::ValidationError,
+    history::SnapshotPolicy, loss::Loss, neural_net::NeuralNet,
 };
 
 fn dataset() -> Dataset {
@@ -117,8 +117,14 @@ fn invalid_training_data_does_not_change_parameters_or_random_state() {
     assert_eq!(net.biases_snapshot(), before_biases);
 
     let valid = dataset();
-    let history = net.train(&valid, None, 2, 1).unwrap();
-    let expected = control.train(&valid, None, 2, 1).unwrap();
+    let history = net
+        .train_with_history(&valid, None, 2, 1, SnapshotPolicy::EveryIterations(1))
+        .unwrap();
+    let expected = control
+        .train_with_history(&valid, None, 2, 1, SnapshotPolicy::EveryIterations(1))
+        .unwrap();
+    assert_eq!(history.parameter_snapshots.len(), 9);
+    assert_eq!(expected.parameter_snapshots.len(), 9);
     for (actual, expected) in history
         .parameter_snapshots
         .iter()
@@ -155,7 +161,7 @@ fn zero_batch_size_and_empty_training_data_return_errors() {
 
 #[test]
 fn evaluation_reports_invalid_data_without_changing_parameters() {
-    let mut net = network();
+    let net = network();
     let weights = net.weights_snapshot();
     let biases = net.biases_snapshot();
     let mut invalid = dataset();
@@ -238,12 +244,12 @@ fn valid_loss_gradients_match_finite_differences() {
             assert!((numerical - gradient[index]).abs() < 1e-7);
         }
     }
-    // Preserve the existing half-squared-error definition in this validation change.
+    // Standard MSE averages over outputs and uses a matching 2/n gradient.
     assert_eq!(
         Loss::MeanSquaredError
-            .calculate(&[1.0, 3.0], &[0.0, 1.0])
+            .calculate(&[1.0, 3.0, 4.0], &[0.0, 1.0, 1.0])
             .unwrap(),
-        2.5
+        14.0 / 3.0
     );
 }
 
@@ -257,7 +263,7 @@ fn training_still_learns_with_a_partial_last_batch_and_test_metrics() {
 
     assert!(after < before && after < 1e-8);
     assert_eq!(history.len(), 200);
-    assert_eq!(history.parameter_snapshots.len(), 400);
+    assert!(history.parameter_snapshots.is_empty());
     let last = history.epochs.last().unwrap();
     assert_eq!(last.train_loss, after);
     assert_eq!(last.test_loss, Some(after));
