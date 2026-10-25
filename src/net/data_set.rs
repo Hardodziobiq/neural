@@ -92,20 +92,41 @@ impl Dataset {
             }
         }
     }
-    pub fn one_hot_encode_targets(&mut self, num_classes: usize) {
-        for target in &mut self.targets {
-            if let Some(&class_value) = target.first() {
-                if !class_value.is_finite()
-                    || class_value < 0.0
-                    || class_value.fract() != 0.0
-                    || class_value >= num_classes as f64
-                {
-                    continue;
-                }
+    /// Converts scalar class labels to one-hot vectors after validating every label.
+    /// On validation failure, all targets remain unchanged. Row indices are zero-based.
+    pub fn one_hot_encode_targets(&mut self, num_classes: usize) -> Result<(), ValidationError> {
+        if num_classes == 0 {
+            return Err(ValidationError::new(
+                "Class count must be greater than zero",
+            ));
+        }
+        if self.targets.is_empty() {
+            return Err(ValidationError::new("Targets must not be empty"));
+        }
 
-                *target = Self::one_hot(class_value as usize, num_classes);
+        for (sample, target) in self.targets.iter().enumerate() {
+            if target.len() != 1 {
+                return Err(ValidationError::new(format!(
+                    "Targets row {sample}: expected exactly one class label before one-hot encoding, got {} values",
+                    target.len(),
+                )));
+            }
+            let class_value = target[0];
+            if !class_value.is_finite()
+                || class_value < 0.0
+                || class_value.fract() != 0.0
+                || class_value >= num_classes as f64
+            {
+                return Err(ValidationError::new(format!(
+                    "Targets row {sample}: class label must be a finite integer in 0..{num_classes}, got {class_value}",
+                )));
             }
         }
+
+        for target in &mut self.targets {
+            *target = Self::one_hot(target[0] as usize, num_classes);
+        }
+        Ok(())
     }
     pub fn shuffled(&self, rng: &mut StdRng) -> Self {
         let mut dataset: Dataset = self.clone();
@@ -135,9 +156,7 @@ impl Dataset {
     fn one_hot(class: usize, num_classes: usize) -> Vec<f64> {
         let mut result: Vec<f64> = vec![0.0; num_classes];
 
-        if class < num_classes {
-            result[class] = 1.0;
-        }
+        result[class] = 1.0;
 
         result
     }
