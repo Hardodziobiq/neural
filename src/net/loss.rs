@@ -1,3 +1,5 @@
+use crate::net::error::ValidationError;
+
 const PROTECT: f64 = 1e-15;
 pub enum Loss {
     MeanSquaredError,
@@ -7,22 +9,54 @@ pub enum Loss {
 }
 
 impl Loss {
-    pub fn calculate(&self, predictions: &[f64], real: &[f64]) -> f64 {
-        match self {
+    /// Calculates loss for equally sized, nonempty vectors of finite values.
+    pub fn calculate(&self, predictions: &[f64], real: &[f64]) -> Result<f64, ValidationError> {
+        validate_inputs(predictions, real)?;
+        Ok(match self {
             Loss::MeanSquaredError => mse(predictions, real),
             Loss::MeanAbsoluteError => mae(predictions, real),
             Loss::BinaryCrossEntropy => bce(predictions, real),
             Loss::CategorialCrossEntropy => cce(predictions, real),
-        }
+        })
     }
-    pub fn calculate_init_gradient(&self, predictions: &[f64], real: &[f64]) -> Vec<f64> {
-        match self {
+    pub fn calculate_init_gradient(
+        &self,
+        predictions: &[f64],
+        real: &[f64],
+    ) -> Result<Vec<f64>, ValidationError> {
+        validate_inputs(predictions, real)?;
+        Ok(match self {
             Loss::MeanSquaredError => init_gradient_mse(predictions, real),
             Loss::MeanAbsoluteError => init_gradient_mae(predictions, real),
             Loss::BinaryCrossEntropy => init_gradient_bce(predictions, real),
             Loss::CategorialCrossEntropy => init_gradient_cce(predictions, real),
+        })
+    }
+}
+
+fn validate_inputs(predictions: &[f64], real: &[f64]) -> Result<(), ValidationError> {
+    if predictions.len() != real.len() {
+        return Err(ValidationError::new(format!(
+            "Predictions and targets must have equal lengths: got {} and {}",
+            predictions.len(),
+            real.len(),
+        )));
+    }
+    if predictions.is_empty() {
+        return Err(ValidationError::new(
+            "Predictions and targets must not be empty",
+        ));
+    }
+    for (name, values) in [("Prediction", predictions), ("Target", real)] {
+        for (index, value) in values.iter().enumerate() {
+            if !value.is_finite() {
+                return Err(ValidationError::new(format!(
+                    "{name} at index {index} must be finite",
+                )));
+            }
         }
     }
+    Ok(())
 }
 
 fn mse(predictions: &[f64], real: &[f64]) -> f64 {

@@ -1,4 +1,5 @@
 pub mod data_set;
+pub mod error;
 pub mod history;
 pub mod activation_function;
 pub mod cache;
