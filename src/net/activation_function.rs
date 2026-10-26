@@ -14,6 +14,7 @@ pub enum ActivationFunction {
 }
 
 impl ActivationFunction {
+    /// Applies the selected activation to a layer output vector in place.
     pub fn process(&self, output: &mut [f64]) {
         match self {
             ActivationFunction::Linear => linear(output),
@@ -24,6 +25,7 @@ impl ActivationFunction {
         }
     }
 
+    /// Converts the incoming output gradient into a gradient with respect to pre-activation values.
     pub fn compute_delta(&self, given_gradient: &[f64], vec_z: &[f64], vec_a: &[f64]) -> Vec<f64> {
         match self {
             ActivationFunction::Linear => delta_linear(given_gradient),
@@ -35,11 +37,13 @@ impl ActivationFunction {
     }
 }
 
+/// Applies the configured affine activation to each value; current constants make it the identity.
 fn linear(output: &mut [f64]) {
     output.iter_mut().for_each(|value| {
         *value = STANDARD_LINEAR_ALFA * *value + STANDARD_LINEAR_BETA;
     });
 }
+/// Passes the gradient through the linear activation by multiplying by its slope.
 fn delta_linear(given_gradient: &[f64]) -> Vec<f64> {
     given_gradient
         .iter()
@@ -47,11 +51,13 @@ fn delta_linear(given_gradient: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+/// Maps each pre-activation value to a sigmoid output between zero and one.
 fn sigmoid(output: &mut [f64]) {
     output.iter_mut().for_each(|value| {
         *value = 1.0 / (1.0 + (-*value * STANDARD_SIGMOID_ALFA).exp());
     });
 }
+/// Multiplies the incoming gradient by the sigmoid derivative using clipped saved activations.
 fn delta_sigmoid(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
     given_gradient
         .iter()
@@ -63,11 +69,13 @@ fn delta_sigmoid(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+/// Applies the hyperbolic tangent independently to every pre-activation value.
 fn tanh(output: &mut [f64]) {
     output.iter_mut().for_each(|value| {
         *value = value.tanh();
     });
 }
+/// Backpropagates using the saved activation and the derivative `1 - a*a`.
 fn delta_tanh(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
     given_gradient
         .iter()
@@ -76,11 +84,13 @@ fn delta_tanh(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+/// Replaces negative pre-activation values with zero and leaves positive values unchanged.
 fn relu(output: &mut [f64]) {
     output.iter_mut().for_each(|value| {
         *value = value.max(0.0);
     });
 }
+/// Passes gradients only where the saved pre-activation was positive; uses zero at the origin.
 fn delta_relu(given_gradient: &[f64], vec_z: &[f64]) -> Vec<f64> {
     given_gradient
         .iter()
@@ -89,6 +99,7 @@ fn delta_relu(given_gradient: &[f64], vec_z: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+/// Converts a vector into class probabilities, subtracting its maximum for numerical stability.
 fn soft_max(output: &mut [f64]) {
     let max: f64 = output
         .iter()
@@ -100,6 +111,7 @@ fn soft_max(output: &mut [f64]) {
         *value = (*value - max).exp() / sum;
     }
 }
+/// Applies the softmax Jacobian to the incoming gradient using clipped saved probabilities.
 fn delta_softmax(given_gradient: &[f64], vec_a: &[f64]) -> Vec<f64> {
     let a_clamped: Vec<f64> = vec_a
         .iter()

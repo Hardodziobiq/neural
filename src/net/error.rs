@@ -7,6 +7,7 @@ pub struct ValidationError {
 }
 
 impl ValidationError {
+    /// Creates a validation error containing a descriptive message for the caller.
     pub(crate) fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
@@ -15,6 +16,7 @@ impl ValidationError {
 }
 
 impl fmt::Display for ValidationError {
+    /// Displays the stored error message without additional formatting.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(&self.message)
     }

@@ -18,6 +18,7 @@ pub struct NeuralNet {
 }
 
 impl NeuralNet {
+    /// Validates the architecture and learning rate, then initializes fully connected layers using the supplied seed.
     pub fn new(
         seed: u64,
         inputs_count: usize,
@@ -79,12 +80,14 @@ impl NeuralNet {
         })
     }
 
+    /// Creates the seeded generator used for weight initialization and dataset shuffling.
     fn rng(seed: u64) -> StdRng {
         StdRng::seed_from_u64(seed)
     }
 }
 
 impl NeuralNet {
+    /// Returns the original seed so the experiment configuration can be recorded and reproduced.
     pub fn seed(&self) -> u64 {
         self.seed
     }
@@ -114,6 +117,8 @@ impl NeuralNet {
         Ok(output)
     }
 
+    /// Runs the internal forward pass, updating layer caches for a subsequent backward pass.
+    /// Assumes sample dimensions have already been validated.
     fn process(&mut self, mut input: Vec<f64>) -> Vec<f64> {
         for layer in &mut self.layers {
             input = layer.process(input);
@@ -121,6 +126,7 @@ impl NeuralNet {
         input
     }
 
+    /// Starts with the loss gradient and visits layers in reverse, accumulating gradients without changing weights.
     fn process_backward(
         &mut self,
         predictions: &[f64],
@@ -134,6 +140,7 @@ impl NeuralNet {
         Ok(())
     }
 
+    /// Updates every layer from the current batch gradients using the network learning rate.
     fn learn(&mut self) {
         for layer in &mut self.layers {
             layer.learn(self.learning_rate);
@@ -236,6 +243,7 @@ impl NeuralNet {
         self.evaluate_validated(dataset)
     }
 
+    /// Computes mean sample loss for a nonempty dataset whose dimensions and values have already been checked.
     fn evaluate_validated(&self, dataset: &Dataset) -> Result<f64, ValidationError> {
         let mut total_loss: f64 = 0.0;
         for (input, real) in dataset.features.iter().zip(&dataset.targets) {
@@ -246,14 +254,17 @@ impl NeuralNet {
         Ok(total_loss / dataset.features.len() as f64)
     }
 
+    /// Copies current network parameters into history at the supplied update index.
     fn record_snapshot(&self, history: &mut History, iteration: usize) {
         history.record_parameters(iteration, self.weights_snapshot(), self.biases_snapshot());
     }
 
+    /// Returns copied weights indexed by layer, neuron, and input.
     pub fn weights_snapshot(&self) -> Vec<Vec<Vec<f64>>> {
         self.layers.iter().map(|layer| layer.weights()).collect()
     }
 
+    /// Returns copied biases indexed by layer and neuron.
     pub fn biases_snapshot(&self) -> Vec<Vec<f64>> {
         self.layers.iter().map(|layer| layer.biases()).collect()
     }

@@ -7,6 +7,7 @@ pub struct Neuron {
 }
 
 impl Neuron {
+    /// Creates random input weights and a zero bias, remembering whether the bias is enabled.
     pub fn new(rng: &mut StdRng, inputs_count: usize, bias_on: bool) -> Self {
         let bias: f64 = 0.0;
         let weights: Vec<f64> = Self::random_weights(rng, inputs_count);
@@ -16,6 +17,7 @@ impl Neuron {
             bias_on,
         }
     }
+    /// Draws one independent weight per input uniformly from `[-1, 1)` using the supplied RNG.
     fn random_weights(rng: &mut StdRng, inputs_count: usize) -> Vec<f64> {
         (0..inputs_count)
             .map(|_| rng.random_range(-1.0..1.0))
@@ -24,6 +26,7 @@ impl Neuron {
 }
 
 impl Neuron {
+    /// Returns the weighted input sum plus the enabled bias; the input must match the weight count.
     pub fn process(&self, input: &[f64]) -> f64 {
         let mut sum: f64 = 0.0;
         for (idx, x) in input.iter().enumerate() {
@@ -35,14 +38,17 @@ impl Neuron {
         sum
     }
 
+    /// Borrows the neuron's weight vector without copying it.
     pub fn weights(&self) -> &[f64] {
         &self.weights
     }
 
+    /// Returns the stored bias value, including when bias use is disabled.
     pub fn bias(&self) -> f64 {
         self.bias
     }
 
+    /// Subtracts learning-rate-scaled average batch gradients; an empty batch leaves parameters unchanged.
     pub fn learn(
         &mut self,
         learning_rate: f64,

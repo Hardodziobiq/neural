@@ -9,6 +9,7 @@ pub struct StandardScaler {
 }
 
 impl StandardScaler {
+    /// Fits per-column training means and population deviations using Welford's algorithm; rejects invalid data or overflow.
     pub fn fit(rows: &[Vec<f64>]) -> Result<Self, ValidationError> {
         let columns = rows.first().map_or(0, Vec::len);
         if rows.is_empty() || columns == 0 {
@@ -52,10 +53,12 @@ impl StandardScaler {
         })
     }
 
+    /// Borrows the training means used to center each input column.
     pub fn means(&self) -> &[f64] {
         &self.means
     }
 
+    /// Borrows the fitted population deviations; constant columns have deviation zero and use scale one.
     pub fn standard_deviations(&self) -> &[f64] {
         &self.standard_deviations
     }
@@ -66,18 +69,22 @@ impl StandardScaler {
         self.transform_rows(rows, false)
     }
 
+    /// Restores a matrix to its original units using saved statistics; invalid input leaves it unchanged.
     pub fn inverse_transform(&self, rows: &mut [Vec<f64>]) -> Result<(), ValidationError> {
         self.transform_rows(rows, true)
     }
 
+    /// Validates and standardizes one sample using the fitted training means and scales.
     pub fn transform_sample(&self, input: &[f64]) -> Result<Vec<f64>, ValidationError> {
         self.map_sample(input, false)
     }
 
+    /// Validates and restores one standardized sample to its original feature or target units.
     pub fn inverse_transform_sample(&self, input: &[f64]) -> Result<Vec<f64>, ValidationError> {
         self.map_sample(input, true)
     }
 
+    /// Prepares every transformed row before replacing any input rows, preventing partial updates on error.
     fn transform_rows(&self, rows: &mut [Vec<f64>], inverse: bool) -> Result<(), ValidationError> {
         let transformed = rows
             .iter()
@@ -93,6 +100,7 @@ impl StandardScaler {
         Ok(())
     }
 
+    /// Maps one validated row forward or backward through the scaler, using scale one for constant columns.
     fn map_sample(&self, input: &[f64], inverse: bool) -> Result<Vec<f64>, ValidationError> {
         if input.len() != self.means.len() {
             return Err(ValidationError::new(format!(

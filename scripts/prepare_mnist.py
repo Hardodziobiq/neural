@@ -32,10 +32,12 @@ FILE_NAMES = {
 
 
 def open_idx(path: Path) -> BinaryIO:
+    """Opens a plain or gzip-compressed IDX file as a binary stream."""
     return gzip.open(path, "rb") if path.suffix == ".gz" else path.open("rb")
 
 
 def read_exact(stream: BinaryIO, count: int, path: Path) -> bytes:
+    """Reads the requested byte count or raises an error identifying a truncated input file."""
     data = stream.read(count)
     if len(data) != count:
         raise ValueError(f"Truncated IDX file: {path}")
@@ -43,6 +45,7 @@ def read_exact(stream: BinaryIO, count: int, path: Path) -> bytes:
 
 
 def find_file(directory: Path, name: str) -> Path:
+    """Finds an existing MNIST filename variant and returns its absolute path."""
     # Both common MNIST naming conventions are accepted, compressed or plain.
     for stem in (name, name.replace("-idx", ".idx")):
         for suffix in ("", ".gz"):
@@ -54,6 +57,7 @@ def find_file(directory: Path, name: str) -> Path:
 
 class MnistSplit:
     def __init__(self, images: Path, labels: Path):
+        """Validates image and label headers, their counts, and the required 28-by-28 shape."""
         self.images = images
         self.labels = labels
         with open_idx(images) as stream:
@@ -83,6 +87,7 @@ class MnistSplit:
 
 
 def select_indices(count: int, limit: int | None, seed: int) -> set[int] | None:
+    """Returns seeded sample indices without replacement, or None to export the complete split."""
     if limit is None or limit == count:
         return None
     if limit > count:
@@ -91,6 +96,7 @@ def select_indices(count: int, limit: int | None, seed: int) -> set[int] | None:
 
 
 def export_split(source: MnistSplit, path: Path, limit: int | None, seed: int) -> dict:
+    """Writes normalized pixels and scalar labels to CSV and returns source, count, and selection metadata."""
     selected = select_indices(source.count, limit, seed)
     counts: Counter[int] = Counter()
     with path.open("w", encoding="ascii", newline="") as output:
@@ -110,6 +116,9 @@ def export_split(source: MnistSplit, path: Path, limit: int | None, seed: int) -
 
 def prepare(input_dir: Path, output_dir: Path, train_limit: int | None = None,
             test_limit: int | None = None, seed: int = 42, overwrite: bool = False) -> dict:
+    """Exports the official training and test splits separately and returns their metadata.
+    Invalid source data leaves final exports unchanged; replacing existing files requires overwrite.
+    """
     if not 0 <= seed < 2**64:
         raise ValueError("Seed must be an unsigned 64-bit integer")
     if any(limit is not None and limit <= 0 for limit in (train_limit, test_limit)):
@@ -159,6 +168,7 @@ def prepare(input_dir: Path, output_dir: Path, train_limit: int | None = None,
 
 
 def positive(value: str) -> int:
+    """Parses a positive sample limit for argparse, rejecting zero and negative counts."""
     number = int(value)
     if number <= 0:
         raise argparse.ArgumentTypeError("Expected a positive integer")
@@ -166,6 +176,7 @@ def positive(value: str) -> int:
 
 
 def main() -> int:
+    """Parses export arguments, reports expected input errors, and returns zero after a successful export."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, required=True,
                         help="Directory containing the four local MNIST IDX or IDX.gz files")

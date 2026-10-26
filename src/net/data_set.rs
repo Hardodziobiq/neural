@@ -107,6 +107,7 @@ impl Dataset {
         }
         Ok(())
     }
+    /// Returns a shuffled copy using one shared permutation for feature rows and their matching targets.
     pub fn shuffled(&self, rng: &mut StdRng) -> Self {
         let mut dataset: Dataset = self.clone();
         let mut indices: Vec<usize> = (0..dataset.features.len()).collect();
@@ -118,6 +119,7 @@ impl Dataset {
 }
 
 impl Dataset {
+    /// Creates a class indicator vector; the class index must already have been validated.
     fn one_hot(class: usize, num_classes: usize) -> Vec<f64> {
         let mut result: Vec<f64> = vec![0.0; num_classes];
 
@@ -127,6 +129,7 @@ impl Dataset {
     }
 }
 
+/// Loads headered numeric CSV; all columns except the last are inputs and the last is one regression target.
 pub fn load_regression(path: &str) -> io::Result<Dataset> {
     let content: String = fs::read_to_string(path)?;
     let mut lines: std::str::Lines<'_> = content.lines();
@@ -171,6 +174,7 @@ pub fn load_regression(path: &str) -> io::Result<Dataset> {
     Ok(Dataset { features, targets })
 }
 
+/// Loads headered numeric CSV into feature rows and nonnegative integer class labels from the last column.
 pub fn load_classification(path: &str) -> io::Result<(Vec<Vec<f64>>, Vec<usize>)> {
     let content: String = fs::read_to_string(path)?;
     let mut lines: std::str::Lines<'_> = content.lines();

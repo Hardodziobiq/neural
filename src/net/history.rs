@@ -29,6 +29,7 @@ pub struct History {
 }
 
 impl History {
+    /// Appends the batch loss measured before an update, together with its epoch and actual sample count.
     pub fn record_iteration(
         &mut self,
         iteration: usize,
@@ -51,10 +52,12 @@ impl History {
         std::fs::write(path, svg)
     }
 
+    /// Creates an empty history of epochs, parameter updates, and optional parameter snapshots.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Appends whole-dataset losses measured at the end of an epoch; the evaluation loss is optional.
     pub fn record_epoch(&mut self, epoch: usize, train_loss: f64, test_loss: Option<f64>) {
         self.epochs.push(EpochMetrics {
             epoch,
@@ -63,6 +66,7 @@ impl History {
         });
     }
 
+    /// Stores an owned weight/bias snapshot associated with a parameter-update index.
     pub fn record_parameters(
         &mut self,
         iteration: usize,
@@ -76,10 +80,12 @@ impl History {
         });
     }
 
+    /// Returns the number of recorded epochs, not the number of updates or parameter snapshots.
     pub fn len(&self) -> usize {
         self.epochs.len()
     }
 
+    /// Reports whether any epoch metrics have been recorded.
     pub fn is_empty(&self) -> bool {
         self.epochs.is_empty()
     }
