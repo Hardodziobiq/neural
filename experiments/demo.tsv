@@ -7,11 +7,3 @@ regression	../examples/regression_train.csv	../examples/regression_test.csv		8,8
 regression	../examples/regression_train.csv	../examples/regression_test.csv		8,8,8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-3
 regression	../examples/regression_train.csv	../examples/regression_test.csv		8,8,8,8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-4
 regression	../examples/regression_train.csv	../examples/regression_test.csv		8	tanh	mae	0.01	42	true	200	4	../results/experiments/reg-mae
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8	sigmoid	cce	0.01	42	true	200	4	../results/experiments/class-sigmoid
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-tanh
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8	relu	cce	0.01	42	true	200	4	../results/experiments/class-relu
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	none	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-0
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-2
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8,8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-3
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8,8,8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-4
-classification	../examples/classification_train.csv	../examples/classification_test.csv	3	8	tanh	mse	0.01	42	true	200	4	../results/experiments/class-mse
