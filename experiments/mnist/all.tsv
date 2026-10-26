@@ -1,0 +1,10 @@
+task	train	test	classes	hidden	activation	output	loss	learning_rate	seed	bias	epochs	batch	snapshot_every	weight_limit	out_dir
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	tanh	softmax	cce	0.01	1	true	10	64	47	12	../../results/mnist/64-tanh-seed1
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	tanh	softmax	cce	0.01	2	true	10	64	47	12	../../results/mnist/64-tanh-seed2
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	tanh	softmax	cce	0.01	3	true	10	64	47	12	../../results/mnist/64-tanh-seed3
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	128	tanh	softmax	cce	0.01	1	true	10	64	47	12	../../results/mnist/128-tanh-seed1
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	128	tanh	softmax	cce	0.01	2	true	10	64	47	12	../../results/mnist/128-tanh-seed2
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	128	tanh	softmax	cce	0.01	3	true	10	64	47	12	../../results/mnist/128-tanh-seed3
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	relu	softmax	cce	0.01	1	true	10	64	47	12	../../results/mnist/64-relu-seed1
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	relu	softmax	cce	0.01	2	true	10	64	47	12	../../results/mnist/64-relu-seed2
+classification	../../data/mnist/train.csv	../../data/mnist/test.csv	10	64	relu	softmax	cce	0.01	3	true	10	64	47	12	../../results/mnist/64-relu-seed3

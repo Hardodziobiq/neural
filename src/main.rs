@@ -1,47 +1,28 @@
-const FILE_PATHS_CLASSIFICATION_TRAIN: [&str; 8] = [
-    "data.simple.train.100.csv",
-    "data.simple.train.500.csv",
-    "data.simple.train.1000.csv",
-    "data.simple.train.10000.csv",
-    "data.three_gauss.train.100.csv",
-    "data.three_gauss.train.500.csv",
-    "data.three_gauss.train.1000.csv",
-    "data.three_gauss.train.10000.csv",
-];
+mod cli;
+mod experiment;
+mod report;
 
-const FILE_PATHS_CLASSIFICATION_TEST: [&str; 8] = [
-    "data.simple.test.100.csv",
-    "data.simple.test.500.csv",
-    "data.simple.test.1000.csv",
-    "data.simple.test.10000.csv",
-    "data.three_gauss.test.100.csv",
-    "data.three_gauss.test.500.csv",
-    "data.three_gauss.test.1000.csv",
-    "data.three_gauss.test.10000.csv",
-];
+use cli::{Command, Options};
+use experiment::Task;
+use std::{env, error::Error};
 
-const FILE_PATHS_REGRESSION_TRAIN: [&str; 8] = [
-    "data.activation.train.100.csv",
-    "data.activation.train.500.csv",
-    "data.activation.train.1000.csv",
-    "data.activation.train.10000.csv",
-    "data.cube.train.100.csv",
-    "data.cube.train.500.csv",
-    "data.cube.train.1000.csv",
-    "data.cube.train.10000.csv",
-];
+type AppResult<T> = Result<T, Box<dyn Error>>;
 
-const FILE_PATHS_REGRESSION_TEST: [&str; 8] = [
-    "data.activation.test.100.csv",
-    "data.activation.test.500.csv",
-    "data.activation.test.1000.csv",
-    "data.activation.test.10000.csv",
-    "data.cube.test.100.csv",
-    "data.cube.test.500.csv",
-    "data.cube.test.1000.csv",
-    "data.cube.test.10000.csv",
-];
-
-fn main() {
-    println!("Hello, world!");
+/// Parses the command and dispatches a demo, a single training run, or a TSV experiment plan.
+fn main() -> AppResult<()> {
+    match cli::parse(&env::args().skip(1).collect::<Vec<_>>())? {
+        Command::Demo => {
+            experiment::run(Options::demo("regression"), Task::Regression)?;
+            experiment::run(Options::demo("classification"), Task::Classification(3))?;
+        }
+        Command::Help => println!("{}", cli::HELP),
+        Command::Regression(options) => {
+            experiment::run(options, Task::Regression)?;
+        }
+        Command::Classification(options, classes) => {
+            experiment::run(options, Task::Classification(classes))?;
+        }
+        Command::Experiments(path, summary) => experiment::run_suite(&path, &summary)?,
+    }
+    Ok(())
 }
