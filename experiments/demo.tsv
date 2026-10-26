@@ -1,0 +1,17 @@
+task	train	test	classes	hidden	activation	loss	learning_rate	seed	bias	epochs	batch	out_dir
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8	sigmoid	mse	0.01	42	true	200	4	../results/experiments/reg-sigmoid
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-tanh
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8	relu	mse	0.01	42	true	200	4	../results/experiments/reg-relu
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		none	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-0
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8,8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-2
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8,8,8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-3
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8,8,8,8	tanh	mse	0.01	42	true	200	4	../results/experiments/reg-depth-4
+regression	../data/demo/regression_train.csv	../data/demo/regression_test.csv		8	tanh	mae	0.01	42	true	200	4	../results/experiments/reg-mae
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8	sigmoid	cce	0.01	42	true	200	4	../results/experiments/class-sigmoid
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-tanh
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8	relu	cce	0.01	42	true	200	4	../results/experiments/class-relu
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	none	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-0
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-2
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8,8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-3
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8,8,8,8	tanh	cce	0.01	42	true	200	4	../results/experiments/class-depth-4
+classification	../data/demo/classification_train.csv	../data/demo/classification_test.csv	3	8	tanh	mse	0.01	42	true	200	4	../results/experiments/class-mse

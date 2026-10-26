@@ -195,13 +195,16 @@ impl NeuralNet {
                 .chunks(batch_size)
                 .zip(shuffled_data.targets.chunks(batch_size))
             {
+                let mut batch_loss = 0.0;
                 for (input, real) in inputs.iter().zip(targets) {
                     let predictions: Vec<f64> = self.process(input.clone());
+                    batch_loss += self.loss.calculate(&predictions, real)? / inputs.len() as f64;
                     self.process_backward(&predictions, real)?;
                 }
 
                 self.learn();
                 iteration += 1;
+                history.record_iteration(iteration, epoch, inputs.len(), batch_loss);
 
                 if let SnapshotPolicy::EveryIterations(interval) = snapshot_policy {
                     if iteration.is_multiple_of(interval) {

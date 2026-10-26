@@ -4,7 +4,7 @@ const STANDARD_SIGMOID_ALFA: f64 = 1.0;
 
 const PROTECT: f64 = 1e-15;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum ActivationFunction {
     Linear,
     Sigmoid,

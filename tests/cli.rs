@@ -4,8 +4,9 @@ use std::{path::PathBuf, process::Command};
 
 #[test]
 fn demo_runs_from_another_directory_and_reports_both_tasks_in_english() {
+    let directory = common::TempDir::new();
     let output = Command::new(env!("CARGO_BIN_EXE_neural"))
-        .current_dir(std::env::temp_dir())
+        .current_dir(&directory.path)
         .output()
         .unwrap();
     assert!(

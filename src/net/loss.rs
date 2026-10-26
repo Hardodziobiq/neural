@@ -1,6 +1,7 @@
 use crate::net::error::ValidationError;
 
 const PROTECT: f64 = 1e-15;
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Loss {
     MeanSquaredError,
     MeanAbsoluteError,

@@ -1,4 +1,13 @@
 #[derive(Clone, Debug)]
+pub struct IterationMetrics {
+    pub iteration: usize,
+    pub epoch: usize,
+    pub samples_count: usize,
+    /// Mean loss of this batch, measured before its parameter update.
+    pub batch_loss: f64,
+}
+
+#[derive(Clone, Debug)]
 pub struct EpochMetrics {
     pub epoch: usize,
     pub train_loss: f64,
@@ -15,10 +24,26 @@ pub struct ParameterSnapshot {
 #[derive(Clone, Debug, Default)]
 pub struct History {
     pub epochs: Vec<EpochMetrics>,
+    pub iterations: Vec<IterationMetrics>,
     pub parameter_snapshots: Vec<ParameterSnapshot>,
 }
 
 impl History {
+    pub fn record_iteration(
+        &mut self,
+        iteration: usize,
+        epoch: usize,
+        samples_count: usize,
+        batch_loss: f64,
+    ) {
+        self.iterations.push(IterationMetrics {
+            iteration,
+            epoch,
+            samples_count,
+            batch_loss,
+        });
+    }
+
     /// Saves a linear-scale SVG chart of training and available test losses.
     /// The parent directory must exist. Existing files are replaced only after validation.
     pub fn save_loss_plot(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
