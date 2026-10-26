@@ -3,6 +3,11 @@
 A fully connected neural network in Rust with backpropagation and mini-batch SGD.
 No neural-network library is used. Code, program output, and reports are in English.
 
+Keep your datasets in `data/`, which is excluded from Git. See
+[DATA_FORMAT.md](DATA_FORMAT.md) for the required directory layout and CSV examples.
+Only four tiny demonstration files are included in `examples/` so the demo and
+automated tests work without downloading external datasets.
+
 ## Run an experiment
 
 ```console
@@ -43,7 +48,7 @@ Each run can change one factor while holding the others fixed:
 For example, change the hidden activation and architecture without editing code:
 
 ```console
-cargo run --release -- regression data/demo/regression_train.csv data/demo/regression_test.csv 200 4 --hidden 8,8 --activation relu --loss mse --seed 42 --bias false --out-dir results/relu
+cargo run --release -- regression examples/regression_train.csv examples/regression_test.csv 200 4 --hidden 8,8 --activation relu --loss mse --seed 42 --bias false --out-dir results/relu
 ```
 
 For two-class BCE, `--loss bce` selects one sigmoid output and scalar 0/1 targets.

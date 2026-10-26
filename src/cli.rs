@@ -52,7 +52,7 @@ pub struct Options {
 
 impl Options {
     pub fn demo(task: &str) -> Self {
-        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/data/demo/");
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/");
         let mut options = Self::new(
             format!("{root}{task}_train.csv"),
             format!("{root}{task}_test.csv"),

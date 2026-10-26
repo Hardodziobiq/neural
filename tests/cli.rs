@@ -38,7 +38,7 @@ fn demo_runs_from_another_directory_and_reports_both_tasks_in_english() {
 
 fn demo_file(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("data/demo")
+        .join("examples")
         .join(name)
 }
 
