@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">
+<title>Training loss by epoch</title><rect width="1000" height="560" fill="white"/><g font-family="sans-serif" font-size="12" fill="#253047"><text x="100" y="32" font-size="20">Training loss by epoch</text>
+<polygon points="166.03,109.43 232.06,250.12 298.09,305.82 364.11,338.03 430.14,359.96 496.17,376.10 562.20,388.59 628.23,398.66 694.26,406.97 760.29,413.97 760.29,419.12 694.26,412.47 628.23,404.64 562.20,395.12 496.17,383.33 430.14,368.08 364.11,347.40 298.09,316.89 232.06,263.73 166.03,125.59" fill="hsl(0,65%,40%)" opacity="0.15"/>
+<polyline id="batch-epoch-config-1" points="166.03,117.51 232.06,256.92 298.09,311.35 364.11,342.72 430.14,364.02 496.17,379.72 562.20,391.85 628.23,401.65 694.26,409.72 760.29,416.54" fill="none" stroke="hsl(0,65%,40%)" stroke-width="2"/>
+<polygon points="166.03,88.18 232.06,259.35 298.09,358.52 364.11,375.22 430.14,405.58 496.17,414.57 562.20,426.56 628.23,381.30 694.26,431.72 760.29,431.59 760.29,439.09 694.26,439.34 628.23,451.82 562.20,434.61 496.17,431.76 430.14,423.70 364.11,398.49 298.09,368.14 232.06,287.63 166.03,99.06" fill="hsl(137,65%,40%)" opacity="0.15"/>
+<polyline id="batch-epoch-config-2" points="166.03,93.62 232.06,273.49 298.09,363.33 364.11,386.86 430.14,414.64 496.17,423.16 562.20,430.59 628.23,416.56 694.26,435.53 760.29,435.34" fill="none" stroke="hsl(137,65%,40%)" stroke-width="2"/>
+<polygon points="166.03,140.11 232.06,279.69 298.09,332.31 364.11,361.19 430.14,379.70 496.17,392.62 562.20,402.25 628.23,409.75 694.26,415.72 760.29,420.62 760.29,424.42 694.26,419.63 628.23,413.83 562.20,406.61 496.17,397.38 430.14,385.10 364.11,367.94 298.09,341.20 232.06,292.21 166.03,166.82" fill="hsl(274,65%,40%)" opacity="0.15"/>
+<polyline id="batch-epoch-config-3" points="166.03,153.46 232.06,285.95 298.09,336.76 364.11,364.57 430.14,382.40 496.17,395.00 562.20,404.43 628.23,411.79 694.26,417.68 760.29,422.52" fill="none" stroke="hsl(274,65%,40%)" stroke-width="2"/>
+<text x="100.00" y="492" text-anchor="middle">0.00e0</text><text x="90" y="474.00" text-anchor="end">3.27e-1</text>
+<text x="238.00" y="492" text-anchor="middle">2.09e0</text><text x="90" y="394.00" text-anchor="end">7.17e-1</text>
+<text x="376.00" y="492" text-anchor="middle">4.18e0</text><text x="90" y="314.00" text-anchor="end">1.11e0</text>
+<text x="514.00" y="492" text-anchor="middle">6.27e0</text><text x="90" y="234.00" text-anchor="end">1.50e0</text>
+<text x="652.00" y="492" text-anchor="middle">8.36e0</text><text x="90" y="154.00" text-anchor="end">1.89e0</text>
+<text x="790.00" y="492" text-anchor="middle">1.04e1</text><text x="90" y="74.00" text-anchor="end">2.28e0</text>
+<path d="M 100 70 V 470 H 790" fill="none" stroke="#64748b"/>
+<text x="445" y="530" text-anchor="middle">Epoch</text><text transform="translate(22 270) rotate(-90)" text-anchor="middle">Training loss</text>
+<text x="815" y="80" fill="hsl(0,65%,40%)">[128] tanh</text>
+<text x="815" y="100" fill="hsl(137,65%,40%)">[64] ReLU</text>
+<text x="815" y="120" fill="hsl(274,65%,40%)">[64] tanh</text>
+</g></svg>
