@@ -21,6 +21,9 @@ Options:
   --plot FILE.svg          Save the epoch loss plot separately
 
 Defaults: 500 epochs, batch 16. No arguments: run both demos and save reports.
+MSE loss: half the sum of squared output errors per sample (lecture convention).
+Experiment plans also save an HTML batch report next to the summary CSV.
+Every plan must use one training/test file pair, task and class count.
 The final test set is evaluated only after training, never used to select settings.";
 
 pub enum Command {
@@ -51,6 +54,7 @@ pub struct Options {
 }
 
 impl Options {
+    /// Builds options for a bundled example and its default report directory.
     pub fn demo(task: &str) -> Self {
         let root = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/");
         let mut options = Self::new(
@@ -61,6 +65,7 @@ impl Options {
         options
     }
 
+    /// Initializes dataset paths and the default training settings before optional flags are applied.
     fn new(train_path: String, test_path: String) -> Self {
         Self {
             train_path,
@@ -82,6 +87,7 @@ impl Options {
     }
 }
 
+/// Parses command-line arguments, validating values and rejecting unknown or repeated options.
 pub fn parse(args: &[String]) -> Result<Command, String> {
     if args.is_empty() {
         return Ok(Command::Demo);
@@ -212,6 +218,7 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
     }
 }
 
+/// Converts an activation name from the command line into its enum variant.
 fn activation(value: &str) -> Result<Activation, String> {
     match value {
         "linear" => Ok(Activation::Linear),
@@ -223,6 +230,7 @@ fn activation(value: &str) -> Result<Activation, String> {
     }
 }
 
+/// Parses a positive integer for counts and intervals, returning a readable error otherwise.
 fn positive(value: &str, name: &str) -> Result<usize, String> {
     value
         .parse::<usize>()

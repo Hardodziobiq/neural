@@ -1,8 +1,12 @@
-use std::{fmt::Write, io};
+use std::io;
 
-use crate::net::history::History;
+use crate::net::{
+    charts::{Chart, invalid},
+    history::History,
+};
 
-/// Renders only epoch metrics; parameter snapshots are not required.
+/// Validates epoch metrics and renders their loss curves with the shared chart engine.
+/// Parameter snapshots are not required; missing evaluation values break the curve.
 pub(super) fn render(history: &History) -> io::Result<String> {
     let epochs = &history.epochs;
     if epochs.is_empty() {
@@ -25,115 +29,35 @@ pub(super) fn render(history: &History) -> io::Result<String> {
     if minimum == maximum {
         maximum = minimum + 1.0;
     }
-    let range = maximum - minimum;
-    if !range.is_finite() {
+    if !(maximum - minimum).is_finite() {
         return Err(invalid("Loss range is too large to plot"));
     }
-
-    let (left, top, width, height) = (100.0, 60.0, 760.0, 360.0);
-    let first = epochs[0].epoch;
-    let last = epochs[epochs.len() - 1].epoch;
-    let x = |epoch: usize| {
-        if first == last {
-            left + width / 2.0
-        } else {
-            left + (epoch - first) as f64 / (last - first) as f64 * width
-        }
-    };
-    let y = |loss: f64| top + height - (loss - minimum) / range * height;
-    let mut svg = String::from(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"900\" height=\"500\" viewBox=\"0 0 900 500\">\n\
-         <title>Training and test loss by epoch</title>\n\
-         <rect width=\"900\" height=\"500\" fill=\"white\"/>\n\
-         <g font-family=\"sans-serif\" font-size=\"13\" fill=\"#253047\">\n\
-         <text x=\"100\" y=\"30\" font-size=\"20\">Loss by epoch</text>\n\
-         <text x=\"480\" y=\"480\" text-anchor=\"middle\">Epoch</text>\n\
-         <text transform=\"translate(22 240) rotate(-90)\" text-anchor=\"middle\">Loss</text>\n\
-         <text x=\"620\" y=\"30\" fill=\"#2563eb\">Training</text>\n",
+    let mut first = epochs[0].epoch as f64;
+    let mut last = epochs[epochs.len() - 1].epoch as f64;
+    if first == last {
+        let padding = first.abs().max(1.0) * 0.05;
+        first -= padding;
+        last += padding;
+    }
+    let mut chart = Chart::new(
+        "Loss by epoch",
+        "Epoch",
+        "Loss",
+        [first, last, minimum, maximum],
     );
-    if epochs.iter().any(|epoch| epoch.test_loss.is_some()) {
-        svg.push_str("<text x=\"750\" y=\"30\" fill=\"#d97706\">Test</text>\n");
-    }
-    for tick in 0..=5 {
-        let loss = minimum + range * (tick as f64 / 5.0);
-        let position = y(loss);
-        writeln!(
-            svg,
-            "<path d=\"M {left} {position:.2} h {width}\" stroke=\"#e2e8f0\"/>"
-        )
-        .unwrap();
-        writeln!(
-            svg,
-            "<text x=\"90\" y=\"{:.2}\" text-anchor=\"end\">{loss:.2e}</text>",
-            position + 4.0
-        )
-        .unwrap();
-    }
-    let ticks = epochs.len().min(6);
-    for tick in 0..ticks {
-        let index = if ticks == 1 {
-            0
-        } else {
-            tick * (epochs.len() - 1) / (ticks - 1)
-        };
-        let epoch = epochs[index].epoch;
-        writeln!(
-            svg,
-            "<text x=\"{:.2}\" y=\"445\" text-anchor=\"middle\">{epoch}</text>",
-            x(epoch)
-        )
-        .unwrap();
-    }
-    writeln!(
-        svg,
-        "<path d=\"M {left} {top} v {height} h {width}\" fill=\"none\" stroke=\"#64748b\"/>"
-    )
-    .unwrap();
-    let points = epochs
+    let training: Vec<_> = epochs
         .iter()
-        .map(|epoch| format!("{:.2},{:.2}", x(epoch.epoch), y(epoch.train_loss)))
-        .collect::<Vec<_>>()
-        .join(" ");
-    writeln!(svg, "<polyline id=\"training-loss\" points=\"{points}\" fill=\"none\" stroke=\"#2563eb\" stroke-width=\"2\"/>").unwrap();
-    if epochs.len() == 1 {
-        writeln!(
-            svg,
-            "<circle cx=\"{:.2}\" cy=\"{:.2}\" r=\"3\" fill=\"#2563eb\"/>",
-            x(first),
-            y(epochs[0].train_loss)
-        )
-        .unwrap();
+        .map(|epoch| (epoch.epoch as f64, epoch.train_loss))
+        .collect();
+    chart.legend("Training", "#2563eb");
+    chart.line(&training, "#2563eb", "training-loss");
+    if epochs.iter().any(|epoch| epoch.test_loss.is_some()) {
+        chart.legend("Test", "#d97706");
     }
-    svg.push_str("<g id=\"test-loss\" stroke=\"#d97706\" fill=\"#d97706\">\n");
-    for (index, epoch) in epochs.iter().enumerate() {
-        if let Some(loss) = epoch.test_loss {
-            // Missing test metrics break the line rather than implying a measured value.
-            if index > 0 {
-                if let Some(previous) = epochs[index - 1].test_loss {
-                    writeln!(
-                        svg,
-                        "<path d=\"M {:.2} {:.2} L {:.2} {:.2}\" stroke-width=\"2\"/>",
-                        x(epochs[index - 1].epoch),
-                        y(previous),
-                        x(epoch.epoch),
-                        y(loss)
-                    )
-                    .unwrap();
-                }
-            }
-            writeln!(
-                svg,
-                "<circle cx=\"{:.2}\" cy=\"{:.2}\" r=\"2\"/>",
-                x(epoch.epoch),
-                y(loss)
-            )
-            .unwrap();
-        }
-    }
-    svg.push_str("</g>\n</g>\n</svg>\n");
-    Ok(svg)
-}
-
-fn invalid(message: &str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidInput, message)
+    let evaluation: Vec<_> = epochs
+        .iter()
+        .map(|epoch| (epoch.epoch as f64, epoch.test_loss))
+        .collect();
+    chart.gapped_line(&evaluation, "#d97706", "test-loss");
+    Ok(chart.finish())
 }

@@ -5,6 +5,7 @@ pub const COLORS: [&str; 12] = [
     "#7c3aed", "#0f766e", "#b45309", "#475569",
 ];
 
+/// Escapes text for HTML and SVG so labels and paths are displayed literally.
 pub fn escape(value: &str) -> String {
     value
         .replace('&', "&amp;")
@@ -14,6 +15,7 @@ pub fn escape(value: &str) -> String {
         .replace('\'', "&#39;")
 }
 
+/// Returns `[min_x, max_x, min_y, max_y]` with padding; rejects empty or nonfinite data.
 pub fn bounds(points: &[(f64, f64)]) -> io::Result<[f64; 4]> {
     if points.is_empty() || points.iter().any(|(x, y)| !x.is_finite() || !y.is_finite()) {
         return Err(invalid("Chart requires finite, nonempty points"));
@@ -55,6 +57,7 @@ pub struct Chart {
 }
 
 impl Chart {
+    /// Starts an empty chart using titles and a prevalidated coordinate range.
     pub fn new(title: &str, x_label: &str, y_label: &str, bounds: [f64; 4]) -> Self {
         Self {
             title: title.into(),
@@ -66,17 +69,37 @@ impl Chart {
         }
     }
 
+    /// Maps a data value to its horizontal position inside the SVG plotting area.
     fn x(&self, value: f64) -> f64 {
         100.0 + (value - self.bounds[0]) / (self.bounds[1] - self.bounds[0]) * 690.0
     }
+    /// Maps a data value to its SVG vertical position, reversing the downward screen axis.
     fn y(&self, value: f64) -> f64 {
         470.0 - (value - self.bounds[2]) / (self.bounds[3] - self.bounds[2]) * 400.0
     }
 
+    /// Adds a series label and its color to the legend drawn by `finish`.
     pub fn legend(&mut self, label: &str, color: &str) {
         self.legend.push((label.into(), color.into()));
     }
 
+    /// Draws a translucent interval around a series, using lower and upper values at each x coordinate.
+    pub fn band(&mut self, intervals: &[(f64, f64, f64)], color: &str) {
+        let points = intervals
+            .iter()
+            .map(|&(x, _, upper)| (x, upper))
+            .chain(intervals.iter().rev().map(|&(x, lower, _)| (x, lower)))
+            .map(|(x, y)| format!("{:.2},{:.2}", self.x(x), self.y(y)))
+            .collect::<Vec<_>>()
+            .join(" ");
+        writeln!(
+            self.body,
+            "<polygon points=\"{points}\" fill=\"{color}\" opacity=\"0.15\"/>"
+        )
+        .unwrap();
+    }
+
+    /// Appends a connected line through data points; a single observation gets a visible marker.
     pub fn line(&mut self, points: &[(f64, f64)], color: &str, id: &str) {
         let coordinates = points
             .iter()
@@ -89,6 +112,20 @@ impl Chart {
         }
     }
 
+    /// Draws a series in separate segments, breaking the line wherever a measurement is missing.
+    pub fn gapped_line(&mut self, points: &[(f64, Option<f64>)], color: &str, id: &str) {
+        writeln!(self.body, "<g id=\"{}\">", escape(id)).unwrap();
+        for (index, segment) in points.split(|(_, value)| value.is_none()).enumerate() {
+            if segment.is_empty() {
+                continue;
+            }
+            let values: Vec<_> = segment.iter().map(|&(x, y)| (x, y.unwrap())).collect();
+            self.line(&values, color, &format!("{id}-{index}"));
+        }
+        self.body.push_str("</g>\n");
+    }
+
+    /// Draws a circle or square with a tooltip, using a dark border to mark a prediction error.
     pub fn point(
         &mut self,
         point: (f64, f64),
@@ -108,12 +145,14 @@ impl Chart {
         }
     }
 
+    /// Draws a translucent data-space rectangle used to show classification decision regions.
     pub fn cell(&mut self, x0: f64, y0: f64, x1: f64, y1: f64, color: &str) {
         let (x, y) = (self.x(x0), self.y(y1));
         let (width, height) = (self.x(x1) - x, self.y(y0) - y);
         writeln!(self.body, "<rect x=\"{x:.2}\" y=\"{y:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" fill=\"{color}\" opacity=\"0.18\"/>").unwrap();
     }
 
+    /// Consumes the chart and returns complete SVG text, including axes and legend; does not write a file.
     pub fn finish(self) -> String {
         let height = 560.max(100 + self.legend.len() * 20);
         let mut svg = format!(
@@ -145,6 +184,7 @@ impl Chart {
     }
 }
 
+/// Creates an invalid-input I/O error for data that cannot be plotted.
 pub fn invalid(message: &str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message)
 }

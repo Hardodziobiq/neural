@@ -1,5 +1,6 @@
 use neural::net::data_set::Dataset;
 
+/// Builds paired feature rows for a chosen set of scalar or malformed target fixtures.
 fn dataset(targets: Vec<Vec<f64>>) -> Dataset {
     Dataset {
         features: (0..targets.len()).map(|index| vec![index as f64]).collect(),
@@ -7,7 +8,7 @@ fn dataset(targets: Vec<Vec<f64>>) -> Dataset {
     }
 }
 
-// Compare bit patterns so that unchanged NaN labels can also be checked.
+/// Compare bit patterns so that unchanged NaN labels can also be checked.
 fn target_bits(data: &Dataset) -> Vec<Vec<u64>> {
     data.targets
         .iter()
@@ -15,6 +16,7 @@ fn target_bits(data: &Dataset) -> Vec<Vec<u64>> {
         .collect()
 }
 
+/// Checks scalar-to-one-hot conversion and preservation of the feature matrix.
 #[test]
 fn encodes_all_classes_without_changing_features() {
     let mut data = dataset(vec![vec![0.0], vec![1.0], vec![2.0], vec![1.0]]);
@@ -35,6 +37,7 @@ fn encodes_all_classes_without_changing_features() {
     data.validate(1, 3).unwrap();
 }
 
+/// Checks that zero classes are rejected before any target is rewritten.
 #[test]
 fn zero_class_count_leaves_targets_unchanged() {
     let mut data = dataset(vec![vec![0.0], vec![1.0]]);
@@ -44,6 +47,7 @@ fn zero_class_count_leaves_targets_unchanged() {
     assert_eq!(target_bits(&data), before);
 }
 
+/// Checks that encoding an empty target collection produces a validation error.
 #[test]
 fn empty_targets_are_rejected() {
     let mut data = dataset(vec![]);
@@ -52,6 +56,7 @@ fn empty_targets_are_rejected() {
     assert!(data.targets.is_empty());
 }
 
+/// Checks that noninteger, out-of-range, or nonfinite labels leave every target unchanged.
 #[test]
 fn invalid_scalar_labels_do_not_partially_encode_the_dataset() {
     for invalid in [
@@ -76,6 +81,7 @@ fn invalid_scalar_labels_do_not_partially_encode_the_dataset() {
     }
 }
 
+/// Checks that malformed target shapes cannot leave the dataset partially encoded.
 #[test]
 fn empty_or_multivalue_labels_do_not_partially_encode_the_dataset() {
     for invalid in [vec![], vec![1.0, 2.0], vec![0.0, 0.0, 1.0]] {
@@ -89,6 +95,7 @@ fn empty_or_multivalue_labels_do_not_partially_encode_the_dataset() {
     }
 }
 
+/// Checks that already encoded multiclass targets cannot be silently assigned different classes.
 #[test]
 fn repeated_encoding_returns_an_error_without_changing_classes() {
     let mut data = dataset(vec![vec![2.0], vec![0.0], vec![1.0]]);
@@ -101,6 +108,7 @@ fn repeated_encoding_returns_an_error_without_changing_classes() {
     assert_eq!(data.targets[0], vec![0.0, 0.0, 1.0]);
 }
 
+/// Checks initial and repeated encoding behavior for the single-class edge case.
 #[test]
 fn single_class_can_be_encoded_and_repeated_encoding_is_rejected() {
     let mut data = dataset(vec![vec![0.0], vec![0.0]]);

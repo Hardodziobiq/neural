@@ -10,6 +10,7 @@ pub struct TempPlot {
 
 #[allow(dead_code)]
 impl TempPlot {
+    /// Creates a unique temporary SVG path for a plotting test.
     pub fn new() -> Self {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         Self {
@@ -25,6 +26,7 @@ impl TempPlot {
 }
 
 impl Drop for TempPlot {
+    /// Removes the temporary SVG file when its test helper goes out of scope.
     fn drop(&mut self) {
         let _ = std::fs::remove_file(&self.path);
     }
@@ -37,6 +39,7 @@ pub struct TempDir {
 
 #[allow(dead_code)]
 impl TempDir {
+    /// Creates an isolated test directory under target for datasets and experiment reports.
     pub fn new() -> Self {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -56,6 +59,7 @@ impl TempDir {
 }
 
 impl Drop for TempDir {
+    /// Removes only the isolated directory allocated by this test helper.
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.path);
     }

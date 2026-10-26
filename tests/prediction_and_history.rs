@@ -3,6 +3,7 @@ use neural::net::{
     history::SnapshotPolicy, loss::Loss, neural_net::NeuralNet,
 };
 
+/// Creates a repeatable two-input, two-output network for prediction and history tests.
 fn network() -> NeuralNet {
     NeuralNet::new(
         42,
@@ -17,6 +18,7 @@ fn network() -> NeuralNet {
     .unwrap()
 }
 
+/// Builds a small multi-output dataset with a partial final batch.
 fn dataset() -> Dataset {
     Dataset {
         features: vec![
@@ -36,6 +38,7 @@ fn dataset() -> Dataset {
     }
 }
 
+/// Checks public prediction against explicit layer calculations using copied network parameters.
 #[test]
 fn prediction_matches_manual_forward_calculation_for_multiple_outputs() {
     let net = network();
@@ -58,6 +61,7 @@ fn prediction_matches_manual_forward_calculation_for_multiple_outputs() {
     assert_eq!(net.seed(), 42);
 }
 
+/// Checks input validation at the public prediction boundary.
 #[test]
 fn prediction_rejects_wrong_dimensions_and_nonfinite_inputs() {
     let net = network();
@@ -72,6 +76,7 @@ fn prediction_rejects_wrong_dimensions_and_nonfinite_inputs() {
     }
 }
 
+/// Checks that inference and evaluation leave parameters and random state unchanged for later training.
 #[test]
 fn prediction_and_evaluation_do_not_change_future_training() {
     let mut net = network();
@@ -87,6 +92,7 @@ fn prediction_and_evaluation_do_not_change_future_training() {
     assert_eq!(net.biases_snapshot(), control.biases_snapshot());
 }
 
+/// Checks that ordinary training records losses without allocating parameter snapshots.
 #[test]
 fn default_training_keeps_epoch_metrics_without_parameter_copies() {
     let history = network().train(&dataset(), None, 3, 3).unwrap();
@@ -94,6 +100,7 @@ fn default_training_keeps_epoch_metrics_without_parameter_copies() {
     assert!(history.parameter_snapshots.is_empty());
 }
 
+/// Checks snapshot indices and parameter values for initialization and epoch boundaries.
 #[test]
 fn epoch_policy_records_initial_and_end_of_epoch_parameters() {
     let mut net = network();
@@ -114,6 +121,7 @@ fn epoch_policy_records_initial_and_end_of_epoch_parameters() {
     );
 }
 
+/// Checks that parameter-recording intervals count updates continuously across epochs.
 #[test]
 fn interval_policy_records_updates_across_epoch_boundaries() {
     let history = network()
@@ -127,6 +135,7 @@ fn interval_policy_records_updates_across_epoch_boundaries() {
     assert_eq!(iterations, vec![0, 3, 6]);
 }
 
+/// Checks that a zero snapshot interval fails before affecting future training.
 #[test]
 fn invalid_interval_is_rejected_before_changing_model_or_random_state() {
     let mut net = network();
@@ -143,6 +152,7 @@ fn invalid_interval_is_rejected_before_changing_model_or_random_state() {
     assert_eq!(net.biases_snapshot(), control.biases_snapshot());
 }
 
+/// Checks that observing parameters with different snapshot policies does not alter learning.
 #[test]
 fn recording_policy_does_not_change_training_results() {
     let mut baseline = network();
@@ -159,6 +169,7 @@ fn recording_policy_does_not_change_training_results() {
     }
 }
 
+/// Checks that a zero-epoch run leaves all history collections empty.
 #[test]
 fn zero_epochs_does_not_record_snapshots_even_when_enabled() {
     let history = network()
@@ -168,25 +179,27 @@ fn zero_epochs_does_not_record_snapshots_even_when_enabled() {
     assert!(history.parameter_snapshots.is_empty());
 }
 
+/// Checks the lecture's half-sum loss and unscaled error gradient for one and three outputs.
 #[test]
-fn mse_value_and_gradient_average_over_output_count() {
+fn mse_value_and_gradient_follow_lecture_convention() {
     let loss = Loss::MeanSquaredError;
-    assert_eq!(loss.calculate(&[3.0], &[1.0]).unwrap(), 4.0);
+    assert_eq!(loss.calculate(&[3.0], &[1.0]).unwrap(), 2.0);
     assert_eq!(
         loss.calculate_init_gradient(&[3.0], &[1.0]).unwrap(),
-        vec![4.0]
+        vec![2.0]
     );
     assert_eq!(
         loss.calculate(&[3.0, 3.0, 3.0], &[1.0, 1.0, 1.0]).unwrap(),
-        4.0
+        6.0
     );
     assert_eq!(
         loss.calculate_init_gradient(&[3.0, 3.0, 3.0], &[1.0, 1.0, 1.0])
             .unwrap(),
-        vec![4.0 / 3.0; 3]
+        vec![2.0; 3]
     );
 }
 
+/// Checks every parameter gradient against finite differences through a hidden layer.
 #[test]
 fn backward_weight_and_bias_gradients_match_numerical_mse_derivatives() {
     let mut net = network();
@@ -194,7 +207,6 @@ fn backward_weight_and_bias_gradients_match_numerical_mse_derivatives() {
     let before_biases = net.biases_snapshot();
     let input = [0.2, -0.4];
     let target = [0.7, -0.1];
-    let output_count = target.len() as f64;
     let manual_loss = |weights: &[Vec<Vec<f64>>], biases: &[Vec<f64>]| {
         let hidden: Vec<f64> = weights[0]
             .iter()
@@ -210,7 +222,7 @@ fn backward_weight_and_bias_gradients_match_numerical_mse_derivatives() {
             .map(|((weights, bias), target)| {
                 let prediction =
                     weights.iter().zip(&hidden).map(|(w, x)| w * x).sum::<f64>() + bias;
-                (prediction - target).powi(2) / output_count
+                0.5 * (prediction - target).powi(2)
             })
             .sum::<f64>()
     };
@@ -250,6 +262,7 @@ fn backward_weight_and_bias_gradients_match_numerical_mse_derivatives() {
     }
 }
 
+/// Checks the complete scaling, training, prediction, and inverse-scaling pipeline for multiple targets.
 #[test]
 fn standardized_multioutput_regression_predicts_in_original_units() {
     let mut train = Dataset {

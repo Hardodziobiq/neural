@@ -2,6 +2,7 @@ mod common;
 
 use neural::net::history::History;
 
+/// Checks that an epoch chart includes both available loss series and their expected coordinates.
 #[test]
 fn plots_training_and_optional_test_series() {
     let mut history = History::new();
@@ -16,9 +17,11 @@ fn plots_training_and_optional_test_series() {
     assert!(svg.contains("id=\"test-loss\""));
     assert!(svg.contains(">Epoch</text>"));
     assert!(svg.contains(">Loss</text>"));
-    assert!(svg.contains("points=\"100.00,132.00 860.00,276.00\""));
+    assert!(svg.contains("points=\"100.00,150.00 790.00,310.00\""));
+    assert!(svg.contains("points=\"100.00,70.00 790.00,230.00\""));
 }
 
+/// Checks visible single-point charts and finite SVG coordinates at extreme valid loss scales.
 #[test]
 fn single_epoch_zero_loss_and_extreme_finite_loss_have_finite_coordinates() {
     for loss in [0.0, 1e-300, f64::MAX] {
@@ -34,6 +37,7 @@ fn single_epoch_zero_loss_and_extreme_finite_loss_have_finite_coordinates() {
     }
 }
 
+/// Checks that absent evaluation metrics break a curve instead of drawing an invented connection.
 #[test]
 fn missing_test_metrics_break_the_test_line() {
     let mut history = History::new();
@@ -43,11 +47,23 @@ fn missing_test_metrics_break_the_test_line() {
     let file = common::TempPlot::new();
     history.save_loss_plot(&file.path).unwrap();
     let svg = std::fs::read_to_string(&file.path).unwrap();
-    let test_series = svg.split("<g id=\"test-loss\"").nth(1).unwrap();
+    let test_series = svg
+        .split("<g id=\"test-loss\"")
+        .nth(1)
+        .unwrap()
+        .split("</g>")
+        .next()
+        .unwrap();
     assert_eq!(test_series.matches("<circle").count(), 2);
     assert!(!test_series.contains("<path"));
+    assert_eq!(test_series.matches("<polyline").count(), 2);
+    for coordinates in test_series.split("points=\"").skip(1) {
+        let points = coordinates.split('"').next().unwrap();
+        assert_eq!(points.split_whitespace().count(), 1);
+    }
 }
 
+/// Checks that invalid histories fail before an existing output file can be replaced.
 #[test]
 fn invalid_histories_do_not_overwrite_existing_files() {
     let mut nonfinite = History::new();

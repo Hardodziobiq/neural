@@ -1,5 +1,6 @@
 use neural::net::{data_set::Dataset, standard_scaler::StandardScaler};
 
+/// Compares matrix shapes and values within a small floating-point tolerance.
 fn assert_close(actual: &[Vec<f64>], expected: &[Vec<f64>]) {
     assert_eq!(actual.len(), expected.len());
     for (actual, expected) in actual.iter().zip(expected) {
@@ -10,6 +11,7 @@ fn assert_close(actual: &[Vec<f64>], expected: &[Vec<f64>]) {
     }
 }
 
+/// Checks that evaluation and new inputs use the original fitted training statistics.
 #[test]
 fn test_and_new_inputs_reuse_training_statistics() {
     let training = vec![vec![0.0], vec![2.0]];
@@ -25,6 +27,7 @@ fn test_and_new_inputs_reuse_training_statistics() {
     assert_eq!(scaler.means(), &[1.0]);
 }
 
+/// Checks independent column statistics and forward/inverse transforms.
 #[test]
 fn fits_each_column_using_population_standard_deviation() {
     let original = vec![vec![1.0, 10.0], vec![3.0, 14.0], vec![5.0, 18.0]];
@@ -47,6 +50,7 @@ fn fits_each_column_using_population_standard_deviation() {
     assert_close(&transformed, &original);
 }
 
+/// Checks scale-one handling of zero-variance columns and single-sample datasets.
 #[test]
 fn constant_columns_and_single_sample_remain_reversible() {
     let scaler = StandardScaler::fit(&[vec![5.0, 2.0], vec![5.0, 4.0]]).unwrap();
@@ -63,6 +67,7 @@ fn constant_columns_and_single_sample_remain_reversible() {
     assert_eq!(scaler.inverse_transform_sample(&[0.0]).unwrap(), vec![42.0]);
 }
 
+/// Checks that dataset helpers return the scalers needed for later inputs and original target units.
 #[test]
 fn dataset_helpers_return_reusable_feature_and_target_scalers() {
     let mut training = Dataset {
@@ -81,6 +86,7 @@ fn dataset_helpers_return_reusable_feature_and_target_scalers() {
     );
 }
 
+/// Checks validation before fitting statistics on malformed matrices.
 #[test]
 fn fitting_rejects_empty_ragged_and_nonfinite_data() {
     for rows in [vec![], vec![vec![]], vec![vec![1.0], vec![2.0, 3.0]]] {
@@ -91,6 +97,7 @@ fn fitting_rejects_empty_ragged_and_nonfinite_data() {
     }
 }
 
+/// Checks that a late invalid row leaves the entire matrix unchanged in either transform direction.
 #[test]
 fn transform_and_inverse_do_not_partially_modify_invalid_rows() {
     let scaler = StandardScaler::fit(&[vec![0.0], vec![2.0]]).unwrap();
@@ -116,6 +123,7 @@ fn transform_and_inverse_do_not_partially_modify_invalid_rows() {
     }
 }
 
+/// Checks that fitting and transforming extreme values returns errors rather than invalid numbers.
 #[test]
 fn numeric_overflow_is_reported_instead_of_producing_nan() {
     assert!(StandardScaler::fit(&[vec![-f64::MAX], vec![f64::MAX]]).is_err());
@@ -125,6 +133,7 @@ fn numeric_overflow_is_reported_instead_of_producing_nan() {
     assert!(scaler.inverse_transform_sample(&[f64::MAX]).is_err());
 }
 
+/// Checks that dataset-level preprocessing also preserves data when validation fails.
 #[test]
 fn invalid_dataset_standardization_does_not_change_earlier_rows() {
     let mut data = Dataset {

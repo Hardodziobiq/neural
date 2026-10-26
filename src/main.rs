@@ -1,4 +1,3 @@
-mod charts;
 mod cli;
 mod experiment;
 mod report;
@@ -9,6 +8,7 @@ use std::{env, error::Error};
 
 type AppResult<T> = Result<T, Box<dyn Error>>;
 
+/// Parses the command and dispatches a demo, a single training run, or a TSV experiment plan.
 fn main() -> AppResult<()> {
     match cli::parse(&env::args().skip(1).collect::<Vec<_>>())? {
         Command::Demo => {

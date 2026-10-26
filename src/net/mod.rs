@@ -1,9 +1,10 @@
+pub mod activation_function;
+pub mod cache;
+pub mod charts;
 pub mod data_set;
 pub mod error;
 pub mod history;
 mod history_plot;
-pub mod activation_function;
-pub mod cache;
 pub mod layer;
 pub mod loss;
 pub mod neural_net;

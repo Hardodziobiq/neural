@@ -3,6 +3,7 @@ use neural::net::{
     neural_net::NeuralNet,
 };
 
+/// Checks update numbering, partial batches, and sample-weighted batch losses against whole-dataset loss.
 #[test]
 fn batch_history_has_update_epoch_and_actual_batch_size() {
     let data = Dataset {
@@ -40,6 +41,7 @@ fn batch_history_has_update_epoch_and_actual_batch_size() {
     assert!(history.parameter_snapshots.is_empty());
 }
 
+/// Checks that batch and epoch metrics refer to the documented model states on either side of an update.
 #[test]
 fn iteration_loss_is_measured_before_the_update_and_epoch_loss_afterwards() {
     let data = Dataset {

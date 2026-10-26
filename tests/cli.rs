@@ -2,6 +2,7 @@ mod common;
 
 use std::{path::PathBuf, process::Command};
 
+/// Checks that bundled demos work outside the project directory and produce finite English-language results.
 #[test]
 fn demo_runs_from_another_directory_and_reports_both_tasks_in_english() {
     let directory = common::TempDir::new();
@@ -36,12 +37,14 @@ fn demo_runs_from_another_directory_and_reports_both_tasks_in_english() {
     assert!(!stdout.contains("Loss plot saved"));
 }
 
+/// Returns an absolute path to a small bundled CSV fixture.
 fn demo_file(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("examples")
         .join(name)
 }
 
+/// Checks regression argument parsing and optional SVG output to a path containing spaces.
 #[test]
 fn regression_arguments_generate_an_optional_plot_with_a_path_containing_spaces() {
     let file = common::TempPlot::new();
@@ -64,6 +67,7 @@ fn regression_arguments_generate_an_optional_plot_with_a_path_containing_spaces(
     assert!(svg.contains("id=\"test-loss\""));
 }
 
+/// Checks that regression infers multiple input features instead of assuming a single input.
 #[test]
 fn regression_derives_input_count_from_custom_csv_data() {
     let output = Command::new(env!("CARGO_BIN_EXE_neural"))
@@ -81,6 +85,7 @@ fn regression_derives_input_count_from_custom_csv_data() {
     assert!(String::from_utf8_lossy(&output.stdout).contains("Prediction for [-2.2, -2.1]"));
 }
 
+/// Checks that an explicit classification command trains and reports the expected class decisions.
 #[test]
 fn classification_arguments_select_classes_epochs_and_batch_size() {
     let output = Command::new(env!("CARGO_BIN_EXE_neural"))
@@ -100,6 +105,7 @@ fn classification_arguments_select_classes_epochs_and_batch_size() {
     assert!(!stdout.contains("Regression"));
 }
 
+/// Checks rejection of invalid counts, missing values, duplicate flags, and unsupported arguments.
 #[test]
 fn invalid_arguments_fail_before_loading_files_or_writing_a_plot() {
     for args in [
@@ -135,6 +141,7 @@ fn invalid_arguments_fail_before_loading_files_or_writing_a_plot() {
     }
 }
 
+/// Checks that command-line help advertises training counts and optional plot output.
 #[test]
 fn help_lists_arguments_and_plot_option() {
     let output = Command::new(env!("CARGO_BIN_EXE_neural"))
